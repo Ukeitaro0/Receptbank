@@ -33,6 +33,7 @@
       allergies: [],
       viggo: [],
       equipment: ['Ugn', 'Stekpanna', 'Stektermometer'],
+      ldl: true, satDinner: 7.5,
       satBudget: 19, cholGoal: 300, bgGoal: 3,
       costMin: 25, costMax: 45
     },
@@ -79,6 +80,11 @@
   const N0 = () => [0, 0, 0, 0, 0, 0, 0];
   function addN(acc, id, g, f = 1) { const n = ing(id).n; for (let i = 0; i < 7; i++) acc[i] += (n[i] * g * f) / 100; return acc; }
   const lineCost = (id, g, eco) => { const i = ing(id); return (((eco && i.eco) || i.p) * g) / 1000; };
+  /* LDL-balans: fettkällor graderas efter mättat fett per 1 × fettkälla. */
+  const satPerUnit = (i) => (i.n[4] * (i.fu || 15)) / 100;
+  const fatTier = (i) => { const x = satPerUnit(i); return x <= 2.5 ? 'green' : x <= 5.5 ? 'yellow' : 'red'; };
+  const TIER_NAME = { green: 'grönt – omättat', yellow: 'gult – ost/mejeri, max 1 × per dag', red: 'rött – mättat, bara smaksättning' };
+  const tierDot = (i) => `<span class="fatdot t-${fatTier(i)}" title="${TIER_NAME[fatTier(i)]}: ${fmt(satPerUnit(i))} g mättat per fettkälla"></span>`;
 
   function roundG(g) {
     if (g <= 0) return 0;
@@ -169,7 +175,7 @@
     const fats = by('fat');
     const fatUnits = fats.reduce((s, l) => s + l.g / (ing(l.id).fu || 15), 0);
     const fatOk = Math.abs(fatUnits - fatReq) <= 0.26;
-    rows.push({ k: 'Fett', v: `<b>${fmt(fatUnits, 2)} av ${fmt(fatReq, 2)}</b> × fettkälla · ${esc(fats.map((l) => ing(l.id).name).join(', ') || '–')}`, s: !fats.length && fatReq ? 'err' : fatOk ? 'ok' : 'warn' });
+    rows.push({ k: 'Fett', v: `<b>${fmt(fatUnits, 2)} av ${fmt(fatReq, 2)}</b> × fettkälla · ${fats.map((l) => tierDot(ing(l.id)) + esc(ing(l.id).name)).join(', ') || '–'}`, s: !fats.length && fatReq ? 'err' : fatOk ? 'ok' : 'warn' });
     if (!fatOk && fatReq) notes.push(['warn', fatUnits < fatReq ? `För lite fett: ${fmt(fatReq - fatUnits, 2)} fettkälla saknas per portion (t.ex. ${fmt((fatReq - fatUnits) * 15)} g olivolja).` : `För mycket fett: ${fmt(fatUnits - fatReq, 2)} fettkälla för mycket per portion.`]);
 
     /* Huvudgrönsak */
@@ -204,6 +210,21 @@
       if (group === 4) { cStatus = 'warn'; notes.push(['warn', 'Vegetariskt protein (grupp 4): mallen skippar kolhydraten helt.']); }
     }
     rows.push({ k: 'Kolhydrat', v: esc(cText), s: cStatus });
+
+    /* LDL-balans */
+    if (S.profile.ldl) {
+      const tgt = S.profile.satDinner;
+      const sat = n[4];
+      const sS = sat <= tgt ? 'ok' : sat <= tgt * 1.15 ? 'info' : 'warn';
+      rows.push({ k: 'Mättat fett', v: `<b>${fmt(sat)} g</b> av max ${fmt(tgt)} g för middagen`, s: sS });
+      const tierU = (t) => fats.filter((l) => fatTier(ing(l.id)) === t).reduce((a, l) => a + l.g / (ing(l.id).fu || 15), 0);
+      const red = tierU('red'), yellow = tierU('yellow');
+      if (red > 0.26) notes.push(['warn', `Rött fett ${fmt(red, 2)} × (smör/grädde/kokos): höjer LDL mest. Byt mot olivolja/rapsolja/nötter – ≤ 5 g som smaksättning går bra.`]);
+      if (yellow > 1.01) notes.push(['info', `Gult fett ${fmt(yellow, 2)} × (ost/mejeri): sikta på max 1 × per dag.`]);
+      if (sS === 'warn') notes.push(['warn', `Mättat fett ${fmt(sat)} g – över ${fmt(tgt)} g. Byt fettkälla till grönt eller välj magrare protein.`]);
+      if (prot.some((l) => ing(l.id).fetkott)) notes.push(['info', 'Fett kött/chark – håll det till max 1 gång i veckan.']);
+      if (n[5] > S.profile.cholGoal * 0.5) notes.push(['info', `Kolesterol ${Math.round(n[5])} mg/portion – över halva dagsmålet (${S.profile.cholGoal} mg).`]);
+    }
 
     /* Mejeri-gråzon */
     const dairyUnits = fats.filter((l) => ing(l.id).dairy).reduce((s, l) => s + l.g / (ing(l.id).fu || 15), 0);
@@ -263,7 +284,8 @@
     return chip(`${kr(cost)}/port`, cls);
   }
   function recipeChips(r, a) {
-    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), costChip(a.cost),
+    const satC = S.profile.ldl ? chip(`mättat ${fmt(a.n[4])} g`, a.n[4] <= S.profile.satDinner ? 'chip-good' : a.n[4] > S.profile.satDinner * 1.15 ? 'chip-bad' : '') : '';
+    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), costChip(a.cost), satC,
       r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.mage ? chip('mage', 'chip-info') : '', a.dairy ? chip('mejeri', 'chip-info') : '',
       a.avoid.length ? chip('undvik!', 'chip-bad') : '', r.boxOk === false ? chip('ej matlåda', 'chip-info') : ''].join('');
   }
@@ -319,8 +341,20 @@
         <div><span class="muted">Kostnad, hela satser</span><b>${kr(total)}</b></div>
         <a class="btn" href="#/inkop?w=${off}">🛒 Inköpslista</a>
       </div>
+      ${S.profile.ldl && count ? weekBalance(days) : ''}
       <p class="muted small">Satser räknas på ${hhText(S.profile.hh)} (ändras under Mer).</p>`;
     $$('[data-unplan]', app()).forEach((b) => b.onclick = () => { delete S.plan[b.dataset.unplan]; save(); route(); });
+  }
+  const hasP = (r, k) => r.lines.some((l) => l.role === 'protein' && ing(l.id)[k]);
+  function weekBalance(days) {
+    const rs = days.map((d) => S.plan[d] && getRecipe(S.plan[d])).filter(Boolean);
+    const fish = rs.filter((r) => hasP(r, 'fisk')).length, fet = rs.filter((r) => hasP(r, 'fetkott')).length;
+    const sat = rs.reduce((a, r) => a + analyze(r).n[4], 0) / rs.length;
+    return `<div class="card balance"><h2>LDL-balans</h2><div class="kpis">
+      <div class="${fish >= 2 ? 'good' : ''}"><span>Fisk</span><b>${fish} ggr</b><small>mål 2–3/vecka</small></div>
+      <div class="${fet > 1 ? 'bad' : 'good'}"><span>Fett kött/chark</span><b>${fet} ggr</b><small>max 1/vecka</small></div>
+      <div class="${sat > S.profile.satDinner ? 'bad' : 'good'}"><span>Mättat fett</span><b>${fmt(sat)} g</b><small>snitt/middag, max ${fmt(S.profile.satDinner)}</small></div>
+    </div></div>`;
   }
   function hhText(hh) {
     const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlådor`); if (hh.kids) p.push(`${hh.kids} barn`); if (hh.big) p.push(`${hh.big} storbarn`);
@@ -340,6 +374,8 @@
     return [...hit];
   }
   function candidates() {
+    const wkOff = Math.round((parseISO(mondayOf(SG.d)) - parseISO(mondayOf(today()))) / (7 * 864e5));
+    const wkOther = weekDays(wkOff).map((x) => x !== SG.d && S.plan[x] && getRecipe(S.plan[x])).filter(Boolean);
     const near = new Set(); for (let i = -10; i <= 10; i++) { const d = addDays(SG.d, i); if (i && S.plan[d]) near.add(S.plan[d]); }
     return allRecipes().map((r) => ({ r, a: analyze(r) })).filter(({ r, a }) =>
       !a.avoid.length && r.active <= SG.maxTime && (!SG.group || a.group === SG.group) && (!SG.maxCost || a.cost <= SG.maxCost))
@@ -349,6 +385,11 @@
         if (near.has(c.r.id)) score -= 4;
         if (SG.lyx && c.r.lyx) score += 3; if (!SG.lyx && c.r.lyx) score -= 1;
         if (wdIdx(SG.d) < 4 && c.r.active <= 15) score += 0.5;
+        if (S.profile.ldl) {
+          score -= Math.max(0, c.a.n[4] - S.profile.satDinner) * 0.6;
+          if (hasP(c.r, 'fetkott') && wkOther.some((r) => hasP(r, 'fetkott'))) score -= 3;
+          if (hasP(c.r, 'fisk') && wkOther.filter((r) => hasP(r, 'fisk')).length < 2) score += 1;
+        }
         return Object.assign(c, { m, score });
       }).sort((a, b) => b.score - a.score);
   }
@@ -452,11 +493,11 @@
       const ls = r.lines.filter((l) => l.role === role); if (!ls.length) return '';
       return `<tr class="grp"><th colspan="2">${ROLE_NAME[role]}</th></tr>` + ls.map((l) => {
         const i = ing(l.id);
-        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? '<span class="fatdot" title="fettkälla"></span>' : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}${l.raw ? ' <span class="muted small">(rå)</span>' : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
+        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}${l.raw ? ' <span class="muted small">(rå)</span>' : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
       }).join('');
     }).join('');
     const fats = r.lines.filter((l) => l.role === 'fat');
-    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li><b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> för satsen <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
+    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> för satsen <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
     const kidG = kidGrams(r, VHH);
     const ecoTips = [...new Set([...r.lines.map((l) => l.id), r.kid && r.kid.id].filter((id) => id && ing(id).ecoTip))].map((id) => `<li><b>${esc(ing(id).name)}:</b> ${esc(ing(id).ecoTip)}</li>`).join('');
     const n = a.n; const satPct = Math.min(100, (n[4] / S.profile.satBudget) * 100);
@@ -488,7 +529,7 @@
         <div class="fatbox">
           <h3><span class="fatdot"></span> Fett i satsen – ${fmt(a.fatUnits * P, 1)} × fettkälla</h3>
           <ul>${fatRows || '<li>Inget tillsatt fett.</li>'}</ul>
-          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion. Tillagnings- och tillbehörsfett räknas båda.</p>
+          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion. Tillagnings- och tillbehörsfett räknas båda.${S.profile.ldl ? '<br><span class="fatdot t-green"></span>omättat <span class="fatdot t-yellow"></span>ost/mejeri <span class="fatdot t-red"></span>mättat' : ''}</p>
         </div>
       </section>
 
@@ -686,7 +727,7 @@
       const show = () => {
         const t = inp.value.trim().toLowerCase();
         const list = allIng().filter(PICK[role]).filter((i) => !t || i.name.toLowerCase().includes(t)).slice(0, t ? 12 : 40);
-        res.innerHTML = list.map((i) => `<button data-add="${i.id}">${esc(i.name)}${i.g ? ` <span class="muted small">G${i.g}</span>` : ''}${i.nomall ? ' <span class="muted small">bara barn</span>' : ''}${profileTokens().some((x) => i.name.toLowerCase().includes(x)) ? ' <span class="bad small">undvik</span>' : ''}</button>`).join('');
+        res.innerHTML = list.map((i) => `<button data-add="${i.id}">${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${role === 'fat' ? ` <span class="muted small">${fmt(satPerUnit(i))} g mättat/1×</span>` : ''}${i.g ? ` <span class="muted small">G${i.g}</span>` : ''}${i.nomall ? ' <span class="muted small">bara barn</span>' : ''}${profileTokens().some((x) => i.name.toLowerCase().includes(x)) ? ' <span class="bad small">undvik</span>' : ''}</button>`).join('');
         $$('[data-add]', res).forEach((b) => b.onmousedown = (ev) => { ev.preventDefault(); const i = ing(b.dataset.add); D.lines.push({ id: i.id, g: defaultGrams(role, i), role }); rerender(); });
       };
       inp.onfocus = show; inp.oninput = show; inp.onblur = () => setTimeout(() => (res.innerHTML = ''), 150);
@@ -867,6 +908,11 @@
       </section>
       <section class="card">
         <h2>Mål</h2>
+        <label class="check"><input type="checkbox" id="ldl" ${p.ldl ? 'checked' : ''}> LDL-läge – vårdens råd om fett går före mallen</label>
+        <p class="muted small">Fettkällor graderas efter mättat fett per 1 × fettkälla: <span class="fatdot t-green"></span>≤ 2,5 g (olja, nötter, frön, avokado) · <span class="fatdot t-yellow"></span>≤ 5,5 g (ost, crème fraiche, yoghurt) · <span class="fatdot t-red"></span>mer (smör, grädde, kokos, ghee). Mängden fett följer fortfarande mallen.</p>
+        <div class="row">
+          <label>Mättat fett/middag max <input type="number" step="0.5" data-num="satDinner" value="${p.satDinner}"> g</label>
+        </div>
         <div class="row">
           <label>Mättat fett/dag <input type="number" data-num="satBudget" value="${p.satBudget}"> g</label>
           <label>Kolesterol under <input type="number" data-num="cholGoal" value="${p.cholGoal}"> mg</label>
@@ -912,6 +958,7 @@
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => { p.hh[s.dataset.key] = Math.max(0, p.hh[s.dataset.key] + +b.dataset.d); VHH = clone(p.hh); save(); const y = window.scrollY; viewMore(); window.scrollTo(0, y); }));
     $$('[data-list]', app()).forEach((t) => t.onchange = () => { p[t.dataset.list] = t.value.split('\n').map((x) => x.trim()).filter(Boolean); save(); toast('Sparat'); });
+    $('#ldl').onchange = (e) => { p.ldl = e.target.checked; save(); toast(p.ldl ? 'LDL-läge på' : 'LDL-läge av'); };
     $$('[data-num]', app()).forEach((t) => t.onchange = () => { p[t.dataset.num] = +t.value || 0; save(); toast('Sparat'); });
     $('#cp-prompt').onclick = () => copyText(claudePrompt());
     $('#imp-go').onclick = () => importRecipe($('#imp-json').value);
@@ -963,7 +1010,8 @@ Regler:
 - Protein: en grupp. Fett: G1=1×, G2=2×, G3=2,5×, G4=1×. Huvudgrönsak 100–150 g (1–2 st). Kolhydrat frivillig, EN (inte ris/pasta/bröd för vuxna – de är barntillbehör i "kid").
 - Använd id från listan nedan. Saknas något: {"name":"…","g":…,"role":"…","n":[kcal,protein,fett,kolh,mättat,kolesterol_mg,betaglukan],"p":pris_kr_per_kg}.
 - Undvik: ${p.avoid.join(', ') || '–'}. Allergier: ${p.allergies.join(', ') || '–'}. Gillar: ${p.likes.join(', ') || '–'}. Viggo gillar: ${p.viggo.join(', ') || '–'}. Utrustning: ${p.equipment.join(', ') || '–'}.
-- Mitt mål för mättat fett är ${p.satBudget} g/dag och kolesterol under ${p.cholGoal} mg – väg in det.
+- Mallen och naturliga råvaror gäller (inga lightprodukter, inget processat, inga sötningsmedel). Undantag: fettet. Jag har förhöjt LDL och följer vårdens råd om fett${p.ldl ? ` – max ${p.satDinner} g mättat fett per middagsportion` : ''}, ${p.satBudget} g/dag, kolesterol under ${p.cholGoal} mg.
+- Fettkällor i första hand olivolja, kallpressad rapsolja, nötter, frön, avokado. Ost/mejerifett max 1 × per dag. Smör, grädde, kokos, ghee bara som smaksättning (≤ 5 g). Fett kött/chark max 1 gång/vecka, fisk 2–3 gånger/vecka.
 
 Ingredienser (id=namn): ${ids}`;
   }

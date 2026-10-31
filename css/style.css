@@ -115,6 +115,8 @@ table.ing td { padding: 6px 2px; border-bottom: 1px solid var(--line); }
 table.ing td.num { text-align: right; white-space: nowrap; padding-left: 10px; }
 table.ing tr.grp th { text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 12px 0 2px; }
 .fatdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--fat); margin-right: 6px; vertical-align: 1px; }
+.fatdot.t-green { background: #2f8a57; } .fatdot.t-yellow { background: #e0a526; } .fatdot.t-red { background: #c0392b; }
+.balance .kpis { grid-template-columns: repeat(3, 1fr); }
 .fatrow td:first-child { font-weight: 600; }
 .fatbox { margin-top: 14px; background: color-mix(in srgb, var(--fat) 12%, transparent); border-radius: 10px; padding: 10px 12px; }
 .fatbox h3 { margin: 0 0 6px; font-size: .95rem; }
