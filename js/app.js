@@ -53,7 +53,7 @@
     return clone(DEFAULT_STATE);
   }
   let S = load();
-  const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* lagring saknas (t.ex. förhandsvisning) */ } };
 
   /* ================= Datum ================= */
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -790,7 +790,7 @@
       if (m === 'lunch') recentBoxes.forEach((r) => sugg.push(`<button class="chip-btn hl" data-addr="${esc(r.id)}" data-m="lunch">Matlåda: ${esc(r.title)}</button>`));
       (PLATE_PRESETS[m] || []).forEach((ps, k) => {
         const s = ps.items.reduce((acc, [id, g]) => acc + addN(N0(), id, g)[4], 0);
-        sugg.push(`<button class="chip-btn" data-preset="${k}" data-m="${m}">${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
+        sugg.push(`<button class="chip-btn${ps.fav ? ' hl' : ''}" data-preset="${k}" data-m="${m}">${ps.fav ? '★ ' : ''}${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
       });
       return `<section class="card meal">
         <div class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor · ${kr(c.cost)}</span></div>

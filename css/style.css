@@ -4,7 +4,11 @@
   --fat: #e0a526; --lyx: #8a5cc2; --radius: 14px;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #151816; --card: #1f2421; --ink: #ecefec; --muted: #9aa39d; --line: #333a35; --brand: #6fc29a; --brand-2: #23332a; }
+  :root {
+    --bg: #0d1512; --card: #16221d; --card-2: #1b2a24; --ink: #eef5f0; --muted: #a2b6ab; --line: #26382f;
+    --brand: #4fdc9f; --brand-2: #173a2b; --accent: #ffb547; --accent-2: #7cc4ff;
+    --ok: #4fdc9f; --info: #6aaeff; --warn: #ffb547; --err: #ff6b5e; --fat: #ffb547; --lyx: #c59bff;
+  }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -190,3 +194,69 @@ ul.shop li.done span { text-decoration: line-through; opacity: .5; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @media print { #nav, .actions, .back, .scaler button { display: none !important; } main { padding: 0; } .card { break-inside: avoid; border: 0; } }
+
+/* ===== Livfullare mörkt tema ===== */
+@media (prefers-color-scheme: dark) {
+  body { background:
+      radial-gradient(900px 420px at 15% -120px, rgba(79, 220, 159, .16), transparent 70%),
+      radial-gradient(700px 380px at 100% 0, rgba(255, 181, 71, .09), transparent 70%),
+      var(--bg) fixed; }
+  h1 { background: linear-gradient(90deg, #eef5f0 0%, #9ff0c9 60%, #ffd08a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { color: #c9f5df; }
+  a { color: var(--brand); }
+  .card { background: linear-gradient(180deg, var(--card-2), var(--card)); border-color: var(--line); box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25); }
+  .btn { background: var(--brand-2); }
+  .btn.primary { background: linear-gradient(135deg, #4fdc9f, #2fbf86); color: #062016; border-color: transparent; box-shadow: 0 4px 14px rgba(79,220,159,.25); }
+  .btn.ghost { border-color: #2f463a; }
+  input, select, textarea { background: #0f1a16; border-color: #2c4136; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(79,220,159,.5); outline-offset: 0; border-color: var(--brand); }
+
+  /* Nav */
+  #nav { background: rgba(13, 21, 18, .88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top-color: #22342b; }
+  #nav a.active { color: var(--brand); }
+  #nav a.active span { background: var(--brand-2); border-radius: 999px; margin: 0 auto; width: 52px; box-shadow: 0 0 14px rgba(79,220,159,.25); }
+
+  /* Chips */
+  .chip { background: #1f3329; color: #d6efe2; }
+  .chip-good { background: rgba(79,220,159,.16); color: #7ff0bd; }
+  .chip-bad { background: rgba(255,107,94,.16); color: #ff9c92; }
+  .chip-info { background: rgba(106,174,255,.15); color: #a9cdff; }
+  .chip-lyx { background: rgba(197,155,255,.16); color: #dcc3ff; }
+  .chip-btn, .pick-res button, .pres-i { background: #12201a; border-color: #2c4136; }
+  .chip-btn.hl { background: linear-gradient(135deg, rgba(79,220,159,.22), rgba(255,181,71,.14)); border-color: var(--brand); color: #eafff4; }
+
+  /* Vecka */
+  .day { background: linear-gradient(180deg, var(--card-2), var(--card)); border-color: var(--line); }
+  .day.today { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset, 0 0 22px rgba(79,220,159,.18); }
+  .day:not(.empty) .day-h b { color: var(--accent); }
+  .day.empty { opacity: .8; }
+
+  /* Siffror och rutor */
+  .kpis > div, .cost > div, .macros div { background: #0f1a16; border: 1px solid #22342b; }
+  .kpis b, .cost b, .macros b, .sum b { color: #fff; }
+  .kpis .good b, .good { color: var(--ok); } .kpis .bad b, .bad { color: var(--err); }
+  .summary .big b { color: var(--brand); text-shadow: 0 0 22px rgba(79,220,159,.35); }
+  .summary .big.bad b { color: var(--err); text-shadow: 0 0 22px rgba(255,107,94,.3); }
+  .bar { background: #0f1a16; border-color: #22342b; }
+  .bar div { background: linear-gradient(90deg, #2fbf86, #4fdc9f); box-shadow: 0 0 10px rgba(79,220,159,.4); }
+  .bar div.amber { background: linear-gradient(90deg, #f29b2b, #ffb547); box-shadow: 0 0 10px rgba(255,181,71,.4); }
+  .bar div.red { background: linear-gradient(90deg, #e2483c, #ff6b5e); box-shadow: 0 0 10px rgba(255,107,94,.4); }
+
+  /* Recept */
+  .why { color: #cfe3d8; }
+  .fatbox { background: rgba(255,181,71,.08); border: 1px solid rgba(255,181,71,.22); }
+  .fatbox h3 { color: var(--accent); }
+  .wait { background: rgba(124,196,255,.12); color: #cfe6ff; }
+  .temp { color: #ffcf8f; }
+  .lyx { background: linear-gradient(135deg, rgba(197,155,255,.14), var(--card)); border-color: rgba(197,155,255,.35); }
+  .lyx h2 { color: #dcc3ff; }
+  .cta { background: linear-gradient(135deg, rgba(79,220,159,.2), rgba(79,220,159,.06)); border-color: var(--brand); }
+  .sugg h3 { color: #fff; }
+  .have { color: var(--brand); }
+  table.ing tr.grp th { color: var(--accent-2); }
+  .seg { background: #0f1a16; border-color: #22342b; }
+  .seg button.on { background: linear-gradient(135deg, #4fdc9f, #2fbf86); color: #062016; font-weight: 600; }
+  .sticky { box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+  ul.shop li.done span { opacity: .4; }
+  #toast { background: var(--brand); color: #062016; font-weight: 600; }
+}

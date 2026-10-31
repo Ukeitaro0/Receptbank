@@ -440,7 +440,8 @@ window.SEED_RECIPES = [
 /* Färdiga förslag till Bygg din tallrik (gram per din portion). */
 window.PLATE_PRESETS = {
   frukost: [
-    { name: 'Betaglukanflingor, blåbär & valnötter (dagsranson)', items: [['bgflingor', 40], ['filmjolk', 150], ['blabar', 100], ['valnot', 10]] },
+    { name: 'Min frukost: kvarg, valnötter, blåbär & BetaVivo', fav: true, items: [['kvarg', 175], ['valnot', 30], ['blabar', 50], ['bgflingor', 30]] },
+    { name: 'Min frukost med yoghurt i stället för kvarg', items: [['yoghurt05', 175], ['valnot', 30], ['blabar', 50], ['bgflingor', 30]] },
     { name: 'Havregrynsgröt med blåbär & valnötter', items: [['havregryn', 40], ['havrekli', 10], ['blabar', 100], ['valnot', 15], ['havredryck', 150]] },
     { name: 'Turkisk yoghurt, hallon & pumpafrön', items: [['turkyog', 150], ['hallon', 100], ['pumpafron', 15]] },
     { name: 'Kvarg med äpple, kanel & mandel', items: [['kvarg', 200], ['apple', 100], ['mandel', 15]] },
