@@ -13,6 +13,7 @@
  *   mage  true = möjlig magbov       dairy true = mejeri (gråzon)
  *   eco   pris kr/kg eko/KRAV/MSC    ecoTip  kort bedömning om eko är värt det
  *   pcs   gram per styck, pcsN = enhetsnamn    msk  gram per matsked
+ *   fisk  true = fisk/skaldjur     fetkott true = fett kött/chark (max 1 gång/vecka i LDL-läge)
  *   a     avdelning i inköpslistan
  */
 (function () {
@@ -22,39 +23,39 @@
   const ing = (id, name, cat, n, p, o = {}) => L.push(Object.assign({ id, name, cat, n, p }, o));
 
   /* ---------- PROTEIN grupp 1 – fetare ---------- */
-  ing('blandfars', 'Blandfärs', 'protein', [230, 18, 17, 0, 7, 70, 0], 99, { g: 1, pg: 125, eco: 150, a: A.kott, ecoTip: 'Svensk räcker långt – eko är ett plus men inte nödvändigt.' });
-  ing('flaskfars', 'Fläskfärs', 'protein', [220, 17, 17, 0, 6.5, 70, 0], 85, { g: 1, pg: 125, eco: 140, a: A.kott });
+  ing('blandfars', 'Blandfärs', 'protein', [230, 18, 17, 0, 7, 70, 0], 99, { fetkott: true, g: 1, pg: 125, eco: 150, a: A.kott, ecoTip: 'Svensk räcker långt – eko är ett plus men inte nödvändigt.' });
+  ing('flaskfars', 'Fläskfärs', 'protein', [220, 17, 17, 0, 6.5, 70, 0], 85, { fetkott: true, g: 1, pg: 125, eco: 140, a: A.kott });
   ing('flaskkarre', 'Fläskkarré', 'protein', [200, 19, 14, 0, 5, 70, 0], 99, { g: 1, pg: 125, eco: 170, a: A.kott });
-  ing('korv', 'Korv, hög kötthalt utan socker', 'protein', [250, 15, 21, 1, 8, 60, 0], 120, { g: 1, pg: 125, eco: 170, a: A.kott, ecoTip: 'Läs ingredienslistan – kötthalt ≥ 85 % och inget socker viktigare än eko.' });
-  ing('roktmakrill', 'Rökt makrill', 'protein', [220, 19, 16, 0, 3.5, 70, 0], 180, { g: 1, pg: 125, a: A.kott });
-  ing('lax', 'Lax, odlad filé (fryst)', 'protein', [200, 20, 13, 0, 2.5, 55, 0], 199, { g: 1, pg: 125, eco: 299, a: A.frys, ecoTip: 'ASC räcker oftast. KRAV-lax kostar ~50 % mer.' });
-  ing('oring', 'Öring/fjällröding', 'protein', [160, 20, 8, 0, 2, 55, 0], 230, { g: 1, pg: 125, a: A.kott });
+  ing('korv', 'Korv, hög kötthalt utan socker', 'protein', [250, 15, 21, 1, 8, 60, 0], 120, { fetkott: true, g: 1, pg: 125, eco: 170, a: A.kott, ecoTip: 'Läs ingredienslistan – kötthalt ≥ 85 % och inget socker viktigare än eko.' });
+  ing('roktmakrill', 'Rökt makrill', 'protein', [220, 19, 16, 0, 3.5, 70, 0], 180, { fisk: true, g: 1, pg: 125, a: A.kott });
+  ing('lax', 'Lax, odlad filé (fryst)', 'protein', [200, 20, 13, 0, 2.5, 55, 0], 199, { fisk: true, g: 1, pg: 125, eco: 299, a: A.frys, ecoTip: 'ASC räcker oftast. KRAV-lax kostar ~50 % mer.' });
+  ing('oring', 'Öring/fjällröding', 'protein', [160, 20, 8, 0, 2, 55, 0], 230, { fisk: true, g: 1, pg: 125, a: A.kott });
   ing('kycklinglar', 'Kycklinglårfilé', 'protein', [170, 18, 11, 0, 3, 95, 0], 110, { g: 1, pg: 150, eco: 220, a: A.kott, ecoTip: 'Kyckling är där eko/KRAV gör störst skillnad för djuren – men dubbla priset.' });
   ing('kycklingklubba', 'Kycklingklubbor', 'protein', [180, 18, 12, 0, 3.3, 95, 0], 60, { g: 1, pg: 150, eco: 120, a: A.kott, ecoTip: 'Billigaste kycklingen – vikten inkl. ben, räkna 150 g per portion.' });
   ing('agg', 'Ägg', 'protein', [140, 12.5, 10, 0.5, 2.8, 370, 0], 73, { g: 1, pg: 165, g4: 110, pcs: 55, pcsN: 'st', eco: 110, a: A.mejeri, ecoTip: 'Eko-ägg ~2 kr mer/st – billig uppgradering, värd det.' });
-  ing('bacon', 'Bacon', 'protein', [300, 14, 27, 0, 10, 70, 0], 150, { g: 1, pg: 90, a: A.kott });
+  ing('bacon', 'Bacon', 'protein', [300, 14, 27, 0, 10, 70, 0], 150, { fetkott: true, g: 1, pg: 90, a: A.kott });
 
   /* ---------- PROTEIN grupp 2 – medel ---------- */
   ing('notfars', 'Nötfärs 12 %', 'protein', [190, 19, 12, 0, 5, 65, 0], 115, { g: 2, pg: 125, eco: 170, a: A.kott, ecoTip: 'Svensk nötfärs är redan bra. Gräsbete/eko om budgeten tillåter.' });
   ing('kycklingfars', 'Kycklingfärs', 'protein', [150, 18, 8, 0, 2.5, 80, 0], 105, { g: 2, pg: 125, a: A.kott });
   ing('kalkonfars', 'Kalkonfärs', 'protein', [140, 19, 7, 0, 2.2, 70, 0], 110, { g: 2, pg: 125, a: A.kott });
-  ing('lammfars', 'Lammfärs', 'protein', [230, 17, 18, 0, 8, 75, 0], 160, { g: 2, pg: 125, a: A.kott });
+  ing('lammfars', 'Lammfärs', 'protein', [230, 17, 18, 0, 8, 75, 0], 160, { fetkott: true, g: 2, pg: 125, a: A.kott });
   ing('flaskfile', 'Fläskfilé', 'protein', [110, 21, 3, 0, 1, 60, 0], 130, { g: 2, pg: 125, eco: 230, a: A.kott });
   ing('flaskkotlett', 'Fläskkotlett', 'protein', [180, 20, 11, 0, 4, 65, 0], 89, { g: 2, pg: 125, eco: 160, a: A.kott });
-  ing('hogrev', 'Högrev', 'protein', [200, 19, 14, 0, 6, 65, 0], 170, { g: 2, pg: 125, a: A.kott });
-  ing('entrecote', 'Entrecôte', 'protein', [230, 20, 17, 0, 7.5, 70, 0], 349, { g: 2, pg: 125, a: A.kott });
-  ing('makrilltomat', 'Makrill i tomatsås (burk)', 'protein', [190, 13, 13, 5, 3, 60, 0], 120, { g: 2, pg: 125, a: A.skafferi });
-  ing('sardiner', 'Sardiner i olivolja (avrunna)', 'protein', [210, 24, 12, 0, 2.5, 100, 0], 160, { g: 2, pg: 125, a: A.skafferi });
+  ing('hogrev', 'Högrev', 'protein', [200, 19, 14, 0, 6, 65, 0], 170, { fetkott: true, g: 2, pg: 125, a: A.kott });
+  ing('entrecote', 'Entrecôte', 'protein', [230, 20, 17, 0, 7.5, 70, 0], 349, { fetkott: true, g: 2, pg: 125, a: A.kott });
+  ing('makrilltomat', 'Makrill i tomatsås (burk)', 'protein', [190, 13, 13, 5, 3, 60, 0], 120, { fisk: true, g: 2, pg: 125, a: A.skafferi });
+  ing('sardiner', 'Sardiner i olivolja (avrunna)', 'protein', [210, 24, 12, 0, 2.5, 100, 0], 160, { fisk: true, g: 2, pg: 125, a: A.skafferi });
 
   /* ---------- PROTEIN grupp 3 – magert ---------- */
   ing('kycklingfile', 'Kycklingfilé', 'protein', [110, 23, 1.5, 0, 0.5, 60, 0], 120, { g: 3, pg: 125, eco: 260, a: A.kott, ecoTip: 'Eko-filé kostar dubbelt. Svensk konventionell är rimlig kompromiss.' });
   ing('kalkonfile', 'Kalkonfilé', 'protein', [105, 23, 1, 0, 0.4, 55, 0], 150, { g: 3, pg: 125, a: A.kott });
   ing('innanlar', 'Nötinnanlår', 'protein', [120, 22, 3.5, 0, 1.5, 60, 0], 240, { g: 3, pg: 125, a: A.kott });
   ing('algfars', 'Älgfärs', 'protein', [120, 22, 3, 0, 1.2, 60, 0], 260, { g: 3, pg: 125, a: A.frys });
-  ing('torsk', 'Torskfilé (fryst, MSC)', 'protein', [75, 17, 0.7, 0, 0.1, 45, 0], 149, { g: 3, pg: 125, a: A.frys });
-  ing('sej', 'Sejfilé (fryst, MSC)', 'protein', [80, 18, 0.8, 0, 0.15, 55, 0], 109, { g: 3, pg: 125, a: A.frys, ecoTip: 'Sej är vardagens billigaste vita fisk – MSC-märkt finns nästan alltid.' });
-  ing('tonfisk', 'Tonfisk i vatten (avrunnen)', 'protein', [110, 25, 1, 0, 0.3, 45, 0], 150, { g: 3, pg: 125, a: A.skafferi });
-  ing('rakor', 'Räkor, skalade (frysta)', 'protein', [90, 20, 1, 0, 0.2, 170, 0], 210, { g: 3, pg: 150, a: A.frys });
+  ing('torsk', 'Torskfilé (fryst, MSC)', 'protein', [75, 17, 0.7, 0, 0.1, 45, 0], 149, { fisk: true, g: 3, pg: 125, a: A.frys });
+  ing('sej', 'Sejfilé (fryst, MSC)', 'protein', [80, 18, 0.8, 0, 0.15, 55, 0], 109, { fisk: true, g: 3, pg: 125, a: A.frys, ecoTip: 'Sej är vardagens billigaste vita fisk – MSC-märkt finns nästan alltid.' });
+  ing('tonfisk', 'Tonfisk i vatten (avrunnen)', 'protein', [110, 25, 1, 0, 0.3, 45, 0], 150, { fisk: true, g: 3, pg: 125, a: A.skafferi });
+  ing('rakor', 'Räkor, skalade (frysta)', 'protein', [90, 20, 1, 0, 0.2, 170, 0], 210, { fisk: true, g: 3, pg: 150, a: A.frys });
 
   /* ---------- PROTEIN grupp 4 – vegetariskt ---------- */
   ing('kikartor', 'Kikärtor, kokta (burk, avrunna)', 'protein', [140, 8, 2.5, 18, 0.3, 0, 0], 42, { g: 4, pg: 100, mage: true, a: A.skafferi });
@@ -66,6 +67,7 @@
   ing('parmesan', 'Parmesan', 'fat', [390, 35, 27, 0, 17, 90, 0], 260, { g4: 35, fu: 25, dairy: true, a: A.mejeri });
 
   /* ---------- FETT ---------- */
+  ing('rapsolja', 'Rapsolja, kallpressad', 'fat', [884, 0, 100, 0, 7, 0, 0], 40, { fu: 15, msk: 15, a: A.skafferi, ecoTip: 'Inte på mallens lista – med för LDL-balansen: hälften så mycket mättat fett som olivolja. Kallpressad = bara pressad, inget processat.' });
   ing('olivolja', 'Olivolja', 'fat', [884, 0, 100, 0, 14, 0, 0], 120, { fu: 15, msk: 15, a: A.skafferi });
   ing('smor', 'Smör', 'fat', [740, 0.6, 82, 0.6, 52, 215, 0], 105, { fu: 15, msk: 15, dairy: true, eco: 140, a: A.mejeri });
   ing('ghee', 'Ghee', 'fat', [900, 0, 100, 0, 62, 256, 0], 300, { fu: 15, msk: 15, a: A.skafferi });
@@ -186,6 +188,7 @@
   ing('kvarg', 'Kvarg, naturell', 'other', [60, 11, 0.2, 3.5, 0.1, 5, 0], 50, { dairy: true, a: A.mejeri });
   ing('filmjolk', 'Filmjölk 3 %', 'other', [60, 3.5, 3, 4.5, 1.9, 10, 0], 18, { dairy: true, a: A.mejeri });
   ing('havrekli', 'Havrekli', 'other', [380, 17, 7, 50, 1.3, 0, 8], 45, { a: A.skafferi });
+  ing('bgflingor', 'Betaglukanflingor (din sort)', 'other', [360, 12, 6, 55, 1, 0, 7.5], 70, { a: A.skafferi });
   ing('kaffe', 'Kaffe med mjölkskvätt', 'other', [10, 0.5, 0.5, 0.7, 0.3, 2, 0], 12, { a: A.skafferi });
 
   window.DB = { list: L, aisles: A };

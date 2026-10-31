@@ -37,16 +37,17 @@ window.SEED_RECIPES = [
   },
   {
     id: 'kyckling-rodcurry',
-    title: 'Kycklingcurry med kokos, paprika & haricots verts',
-    why: 'En gryta, 25 min. Mild nog för Viggo om chilin läggs på vid bordet.',
+    title: 'Kycklingcurry med cashew, tomat, paprika & haricots verts',
+    why: 'En gryta, 25 min. Krämig utan grädde eller kokos – mandelsmöret gör jobbet.',
     active: 20, total: 25, tags: ['gryta', 'kyckling'],
     lines: [
       { id: 'kycklingfile', g: 125, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'stekning' },
+      { id: 'rapsolja', g: 15, role: 'fat', note: 'stekning' },
       { id: 'cashew', g: 20, role: 'fat', note: 'rostade, strös över' },
-      { id: 'kokosmjolk', g: 25, role: 'fat', note: 'i grytan' },
+      { id: 'mandelsmor', g: 10, role: 'fat', note: 'rörs ut i såsen' },
       { id: 'paprika', g: 80, role: 'main' },
       { id: 'haricots', g: 60, role: 'main' },
+      { id: 'krossadetomater', g: 60, role: 'side' },
       { id: 'salladslok', g: 10, role: 'side', raw: true },
       { id: 'lime', g: 10, role: 'side' },
       { id: 'koriander', g: 3, role: 'side', raw: true },
@@ -61,7 +62,7 @@ window.SEED_RECIPES = [
       { t: 'Skär kycklingen i bitar, paprikan i strimlor. Riv ingefära och vitlök.' },
       { t: 'Rosta cashewnötterna torrt i grytan, häll upp.' },
       { t: 'Hetta oljan, fräs currypasta, ingefära och vitlök 1 min. Bryn kycklingen 3–4 min.' },
-      { t: 'Häll i kokosmjölk + ca 1 dl vatten per 4 portioner, paprika och haricots verts. Sjud under lock 8 min.', wait: '8 min – plocka undan, duka.' },
+      { t: 'Rör ut mandelsmöret i de krossade tomaterna + ca 1 dl vatten per 4 portioner. Häll i med paprika och haricots verts. Sjud under lock 8 min.', wait: '8 min – plocka undan, duka.' },
       { t: 'Smaka av med fisksås och lime. Toppa med salladslök, koriander och nötter.' },
       { t: 'Viggo: ta upp hans portion innan chili/fisksås om det behövs.' }
     ],
@@ -73,12 +74,13 @@ window.SEED_RECIPES = [
   },
   {
     id: 'farsbiffar-spetskal',
-    title: 'Färsbiffar med stekt spetskål, morötter & senapsrödlök',
-    why: 'Husmanskost på 30 min, billigt och barnvänligt.',
+    title: 'Färsbiffar (nöt + kyckling) med stekt spetskål, morötter & senapsrödlök',
+    why: 'Husmanskost på 30 min. Halva färsen kyckling halverar det mättade fettet – smakar ändå biff.',
     active: 25, total: 30, tags: ['husman', 'budget'],
     lines: [
-      { id: 'blandfars', g: 125, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'stekning av biffar + kål' },
+      { id: 'notfars', g: 62.5, role: 'protein' },
+      { id: 'kycklingfars', g: 62.5, role: 'protein' },
+      { id: 'rapsolja', g: 30, role: 'fat', note: 'hälften till biffarna, hälften till kålen' },
       { id: 'spetskal', g: 150, role: 'main' },
       { id: 'morot', g: 100, role: 'carb' },
       { id: 'rodlok', g: 20, role: 'side', raw: true },
@@ -90,7 +92,7 @@ window.SEED_RECIPES = [
     kid: { id: 'potatis', child: 120, big: 250, how: 'Kokas i samma kastrull som morötterna – morötterna i de sista 10 min.' },
     steps: [
       { t: 'Sätt på potatisen. Skiva rödlöken tunt, blanda med vinäger, senap och en nypa salt.' },
-      { t: 'Salta och peppra färsen, forma biffar (ca 60 g styck).' },
+      { t: 'Blanda färserna, salta och peppra, forma biffar (ca 60 g styck).' },
       { t: 'Stek biffarna i hälften av oljan, 3–4 min per sida. Håll varma i ugn 100°.', wait: 'Medan biffarna steks: skär moroten och lägg den i potatisvattnet.' },
       { t: 'Strimla spetskålen, stek i resten av oljan i samma panna 4–5 min – den ska få färg men ha tugg kvar.' },
       { t: 'Servera med senapslöken och persilja.' }
@@ -104,14 +106,14 @@ window.SEED_RECIPES = [
   },
   {
     id: 'torsk-brynt-smor',
-    title: 'Torsk med brynt smör, rostad blomkål & mandel',
-    why: 'Restaurangkänsla på vardagspris. Blomkålen kan rosta medan du gör annat.',
+    title: 'Torsk med varm mandel- & kaprisolja och rostad blomkål',
+    why: 'Restaurangkänsla på vardagspris, utan smör. Blomkålen rostar medan du gör annat.',
     active: 15, total: 30, tags: ['fisk', 'vardagslyx'],
     lines: [
       { id: 'torsk', g: 125, role: 'protein' },
       { id: 'olivolja', g: 15, role: 'fat', note: 'på blomkålen' },
-      { id: 'smor', g: 15, role: 'fat', note: 'bryns' },
-      { id: 'mandel', g: 10, role: 'fat', note: 'rostas i smöret' },
+      { id: 'olivolja', g: 15, role: 'fat', note: 'värms med mandel, kapris och citron' },
+      { id: 'mandel', g: 10, role: 'fat', note: 'rostas i oljan' },
       { id: 'blomkal', g: 140, role: 'main' },
       { id: 'potatis', g: 50, role: 'carb' },
       { id: 'citron', g: 15, role: 'side' },
@@ -122,56 +124,55 @@ window.SEED_RECIPES = [
     steps: [
       { t: 'Ugnen på 225°. Dela blomkålen i buketter, blanda med olivolja och salt, rosta 20–25 min.', wait: '20 min – sätt på potatisen, duka.' },
       { t: 'Lägg torsken i en smord form, salta, in i ugnen de sista 12–15 min (fryst: 20 min).' },
-      { t: 'Bryn smöret i en kastrull tills det luktar nötigt, lägg i mandeln de sista 30 sek. Av från värmen, pressa i citron, rör ner kapris.' },
-      { t: 'Ös smöret över fisk och blomkål, toppa med persilja.' }
+      { t: 'Värm oljan i en liten kastrull och rosta mandeln 1 min tills den är gyllene. Av från värmen, pressa i citron, rör ner kapris.' },
+      { t: 'Ös oljan över fisk och blomkål, toppa med persilja.' }
     ],
     temp: 'Torsk: 50–52° kärntemp.',
-    box: 'Okej, inte toppen – fisken torkar lätt. Packa smöret separat, värm på 50 % effekt.',
+    box: 'Okej, inte toppen – fisken torkar lätt. Packa oljan separat, värm på 50 % effekt.',
     boxOk: true,
-    upgrade: 'Riv över pepparrot eller toppa med en sked löjrom (helgfredag).',
-    dairyAlt: 'Byt smöret mot 1 msk olivolja med citron och kapris – fräscht men mindre "brynt".',
+    upgrade: 'Riv över pepparrot, eller brynt smör i stället för olja som helglyx (≈ +7 g mättat fett/portion).',
     mageSwap: 'Byt blomkålen mot rostad zucchini eller fänkål.'
   },
   {
     id: 'flaskfile-champinjon',
-    title: 'Fläskfilé med champinjonsås, haricots verts & rotselleri',
+    title: 'Fläskfilé med champinjon- & dijonsky, haricots verts & rotselleri',
     why: 'Fläskfilé är snabbt, magert och oftast på extrapris. 30 min.',
     active: 25, total: 30, tags: ['kött', 'sås'],
     lines: [
       { id: 'flaskfile', g: 125, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'stekning' },
-      { id: 'vispgradde', g: 25, role: 'fat', note: 'i såsen' },
+      { id: 'olivolja', g: 30, role: 'fat', note: '1 msk stekning + 1 msk vispas in i skyn' },
       { id: 'haricots', g: 130, role: 'main' },
       { id: 'rotselleri', g: 100, role: 'carb' },
       { id: 'champinjoner', g: 60, role: 'side' },
       { id: 'gullok', g: 20, role: 'side' },
       { id: 'persilja', g: 2, role: 'side', raw: true },
       { id: 'buljong', g: 2, role: 'other' },
+      { id: 'senap', g: 5, role: 'other' },
       { id: 'kryddor', g: 1, role: 'other', note: 'timjan' }
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Kokas parallellt, ca 20 min.' },
     steps: [
       { t: 'Ugnen på 200°. Skär rotsellerin i 2 cm tärningar, rosta 25 min med en skvätt av oljan och salt. Sätt på potatisen.', wait: '25 min – resten görs under tiden.' },
       { t: 'Bryn fläskfilén runt om i olja, 4–5 min. Lägg i ugnen bredvid rotsellerin tills 62°.' },
-      { t: 'Stek champinjoner och hackad lök i samma panna. Häll på 1 dl vatten per 4 portioner, buljong, timjan och grädde. Sjud 5 min.' },
+      { t: 'Stek champinjoner och hackad lök i samma panna. Häll på 1,5 dl vatten per 4 portioner, buljong, timjan och dijon. Koka ihop 5 min, vispa i resten av oljan på slutet.' },
       { t: 'Koka/ånga haricots verts 4 min.' },
       { t: 'Låt köttet vila 5 min, skiva, servera med såsen.' }
     ],
     temp: 'Fläskfilé: 62–65° kärntemp, vila 5 min.',
     box: 'Bra. Skiva köttet tunt, sås i egen burk. Håller 3 dagar.',
     boxOk: true,
-    upgrade: 'En skvätt konjak eller portvin i såsen och färsk timjan.',
-    dairyAlt: 'Byt grädden mot 1 msk extra olivolja + 1 tsk dijon – tunnare pannsås.'
+    upgrade: 'En skvätt konjak eller portvin i skyn och färsk timjan. Grädde går, men ger ≈ +6 g mättat fett/portion.'
   },
   {
     id: 'halloumi-kikartor',
-    title: 'Varm halloumi- & kikärtssallad med rostad zucchini & paprika',
+    title: 'Varm kikärtssallad med halloumi, ägg & rostad zucchini',
     why: 'Vegetarisk middag som mättar på riktigt. Billig, 25 min.',
     active: 15, total: 25, tags: ['vego', 'budget'],
     lines: [
       { id: 'kikartor', g: 100, role: 'protein' },
-      { id: 'halloumi', g: 50, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'rostning + dressing' },
+      { id: 'halloumi', g: 25, role: 'protein' },
+      { id: 'agg', g: 55, role: 'protein' },
+      { id: 'rapsolja', g: 15, role: 'fat', note: 'rostning + dressing' },
       { id: 'zucchini', g: 80, role: 'main' },
       { id: 'paprika', g: 60, role: 'main' },
       { id: 'tomat', g: 50, role: 'side', raw: true },
@@ -185,9 +186,9 @@ window.SEED_RECIPES = [
     steps: [
       { t: 'Ugnen på 225°. Skär zucchini och paprika i bitar, blanda med kikärtorna, 2/3 av oljan och kryddorna.' },
       { t: 'Rosta 20 min.', wait: '20 min – hacka tomat, gurka, rödlök, persilja.' },
-      { t: 'Gör couscousen.' },
+      { t: 'Koka äggen 8 min, kyl i kallt vatten. Gör couscousen.' },
       { t: 'Skiva halloumin och stek den torrt i het panna, 1–2 min per sida.' },
-      { t: 'Blanda allt, ringla över resten av oljan och citron.' }
+      { t: 'Blanda allt, toppa med delade ägg, ringla över resten av oljan och citron.' }
     ],
     box: 'Bra kall som lunchsallad. Halloumin blir seg kall – värm den kort eller byt mot feta i lådan.',
     boxOk: true,
@@ -196,12 +197,12 @@ window.SEED_RECIPES = [
   },
   {
     id: 'korv-langpanna',
-    title: 'Långpanna med korv, paprika, zucchini & sötpotatis',
-    why: 'Allt i ugnen, 10 min aktiv tid. Perfekt en stökig tisdag.',
-    active: 10, total: 35, tags: ['en plåt', 'budget', 'barnvänlig'],
+    title: 'Långpanna med kycklingklubbor, paprika, zucchini & sötpotatis',
+    why: 'Billigaste kycklingen, allt i ugnen, 10 min aktiv tid. Perfekt en stökig tisdag.',
+    active: 10, total: 45, tags: ['en plåt', 'budget', 'barnvänlig'],
     lines: [
-      { id: 'korv', g: 125, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'på grönsakerna' },
+      { id: 'kycklingklubba', g: 150, role: 'protein' },
+      { id: 'rapsolja', g: 15, role: 'fat', note: 'på klubbor och grönsaker' },
       { id: 'paprika', g: 70, role: 'main' },
       { id: 'zucchini', g: 70, role: 'main' },
       { id: 'sotpotatis', g: 50, role: 'carb' },
@@ -213,22 +214,23 @@ window.SEED_RECIPES = [
     kid: { id: 'potatis', child: 120, big: 250, how: 'Potatisklyftor på en egen plåt samtidigt (lite olja, salt).' },
     steps: [
       { t: 'Ugnen på 225°. Skär sötpotatis i tärningar och potatis i klyftor (egen plåt).' },
-      { t: 'Skär paprika, zucchini och rödlök grovt. Blanda med sötpotatisen, oljan och kryddorna på en plåt.' },
-      { t: 'Rosta 15 min.', wait: '15 min – ledig tid.' },
-      { t: 'Skär korven i bitar, lägg i, rosta 15 min till.', wait: '15 min – ledig tid.' },
+      { t: 'Gnid in klubborna med hälften av oljan, salt och kryddorna. Lägg på plåten med sötpotatisen, in i ugnen.' },
+      { t: 'Rosta 20 min.', wait: '20 min – skär paprika, zucchini och rödlök grovt.' },
+      { t: 'Lägg i grönsakerna med resten av oljan, rosta 20 min till.', wait: '20 min – ledig tid.' },
       { t: 'Toppa med persilja och chili (chilin vid bordet för Viggo).' }
     ],
+    temp: 'Kycklingklubbor: 80–85° vid benet.',
     box: 'Mycket bra. Håller 3 dagar, värms i micro 2 min.',
     boxOk: true,
     upgrade: 'Klick aioli på turkisk yoghurt + vitlök, och fetaostsmul.'
   },
   {
     id: 'notfarswok',
-    title: 'Thaiwok med nötfärs, haricots verts & basilika',
+    title: 'Thaiwok med kycklingfärs, haricots verts & basilika',
     why: '15 min i stekpannan – snabbaste vardagsrätten i banken.',
     active: 15, total: 20, tags: ['snabb', 'wok'],
     lines: [
-      { id: 'notfars', g: 125, role: 'protein' },
+      { id: 'kycklingfars', g: 125, role: 'protein' },
       { id: 'sesamolja', g: 15, role: 'fat', note: 'stekning' },
       { id: 'cashew', g: 20, role: 'fat', note: 'rostade, strös över' },
       { id: 'haricots', g: 80, role: 'main' },
@@ -284,13 +286,14 @@ window.SEED_RECIPES = [
   },
   {
     id: 'fredagsburgare',
-    title: 'Fredagsburgare med cheddar, coleslaw & sötpotatisklyftor',
+    title: 'Fredagsburgare med avokado, coleslaw & sötpotatisklyftor',
     why: 'Helgfredag som fortfarande följer mallen. Vi vuxna skippar brödet.',
     active: 30, total: 35, tags: ['fredag', 'barnvänlig'],
     lyx: true,
     lines: [
-      { id: 'notfars', g: 125, role: 'protein' },
-      { id: 'cheddar', g: 25, role: 'fat', note: 'smälts på burgaren' },
+      { id: 'notfars', g: 62.5, role: 'protein' },
+      { id: 'kycklingfars', g: 62.5, role: 'protein' },
+      { id: 'avokado', g: 60, role: 'fat', note: 'skivad på burgaren' },
       { id: 'majonnas', g: 10, role: 'fat', note: 'i coleslawen' },
       { id: 'olivolja', g: 5, role: 'fat', note: 'på sötpotatisen' },
       { id: 'zucchini', g: 70, role: 'main', note: 'stekta skivor' },
@@ -306,16 +309,15 @@ window.SEED_RECIPES = [
     steps: [
       { t: 'Ugnen på 225°. Sötpotatis i klyftor med oljan och salt, 25 min.', wait: '25 min – resten görs under tiden.' },
       { t: 'Coleslaw: strimla spetskålen fint, blanda med majonnäs, en skvätt vinäger och salt.' },
-      { t: 'Forma burgare (ca 125 g/vuxen, 50 g Viggo). Tryck platta.' },
-      { t: 'Stek zucchiniskivor torrt i het panna, lägg åt sidan. Stek burgarna 3 min/sida, ost på sista minuten med lock.' },
+      { t: 'Blanda färserna, forma burgare (ca 125 g/vuxen, 50 g Viggo). Tryck platta.' },
+      { t: 'Stek zucchiniskivor torrt i het panna, lägg åt sidan. Stek burgarna 3 min/sida.' },
       { t: 'Bygg: salladsblad som "bröd" för oss, bröd för barnen.' }
     ],
     temp: 'Färsburgare: 72°.',
     box: 'Dålig som matlåda – burgare + sallad blir sladdrigt. Gör i stället: stek 2 extra burgare och lägg dem på en matlådesallad med coleslaw separat.',
     boxOk: false,
-    upgrade: 'Karamelliserad lök (15 min i stekpanna) och syltad jalapeño.',
-    mageSwap: 'Byt coleslawen mot en extra rad stekt zucchini och gurka.',
-    dairyAlt: 'Skippa cheddarn, ta 1 msk extra majonnäs eller ½ avokado på burgaren.'
+    upgrade: 'Karamelliserad lök (15 min i stekpanna). En skiva lagrad cheddar går också – ≈ +5 g mättat fett.',
+    mageSwap: 'Byt coleslawen mot en extra rad stekt zucchini och gurka.'
   },
   {
     id: 'vitloksrakor',
@@ -324,8 +326,7 @@ window.SEED_RECIPES = [
     active: 15, total: 20, tags: ['snabb', 'fisk', 'vardagslyx'],
     lines: [
       { id: 'rakor', g: 150, role: 'protein' },
-      { id: 'olivolja', g: 30, role: 'fat', note: 'stekning + till servering' },
-      { id: 'smor', g: 7.5, role: 'fat', note: 'klick i pannan på slutet' },
+      { id: 'olivolja', g: 37.5, role: 'fat', note: 'stekning + ringlas över vid servering' },
       { id: 'broccoli', g: 80, role: 'main' },
       { id: 'zucchini', g: 60, role: 'main' },
       { id: 'vitlok', g: 5, role: 'side' },
@@ -338,7 +339,7 @@ window.SEED_RECIPES = [
       { t: 'Tina räkorna i kallt vatten i ett durkslag. Sätt på pastavattnet.' },
       { t: 'Skär broccoli i små buketter och zucchini i halvmånar. Stek i hälften av oljan 5 min.' },
       { t: 'Skjut åt sidan, lägg i resten av oljan, skivad vitlök och chili, 30 sek. Lägg i räkorna, 2 min – bara varma.' },
-      { t: 'Smör, citron, persilja. Klart.' }
+      { t: 'Ringla över resten av oljan, pressa citron, toppa med persilja. Klart.' }
     ],
     box: 'Okej i 1 dag. Räkorna blir gummiaktiga vid hård uppvärmning – ät ljummen eller kall.',
     boxOk: true,
@@ -374,13 +375,13 @@ window.SEED_RECIPES = [
   },
   {
     id: 'flaskkotlett-vitkal-apple',
-    title: 'Fläskkotlett med smörig vitkål, äpple & senapscrème',
+    title: 'Fläskkotlett med stekt vitkål, äpple & rostade valnötter',
     why: 'Höstklassiker, billigast i banken. Vitkål och äpple är som billigast nu.',
     active: 25, total: 30, tags: ['höst', 'budget', 'husman'],
     lines: [
       { id: 'flaskkotlett', g: 125, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'stekning kött + kål' },
-      { id: 'cremefraiche', g: 25, role: 'fat', note: 'senapscrème' },
+      { id: 'rapsolja', g: 15, role: 'fat', note: 'stekning kött + kål' },
+      { id: 'valnot', g: 20, role: 'fat', note: 'rostade, över kålen' },
       { id: 'vitkal', g: 150, role: 'main' },
       { id: 'apple', g: 100, role: 'carb' },
       { id: 'gullok', g: 30, role: 'side' },
@@ -391,16 +392,15 @@ window.SEED_RECIPES = [
     kid: { id: 'potatis', child: 120, big: 250, how: 'Koka potatisen parallellt, ca 20 min.' },
     steps: [
       { t: 'Sätt på potatisen. Strimla vitkål och lök, skär äpplet i klyftor.' },
-      { t: 'Stek kål och lök i hälften av oljan på medelvärme 10 min, äpplet de sista 3 min. Salta, kummin.', wait: 'Rör då och då – blanda senapscrème: crème fraiche + senap + salt.' },
-      { t: 'Stek kotletterna i resten av oljan, 3 min per sida. Vila 3 min.' },
-      { t: 'Servera med kålen och senapscrèmen.' }
+      { t: 'Stek kål och lök i hälften av oljan på medelvärme 10 min, äpplet de sista 3 min. Salta, kummin.', wait: 'Rör då och då – rosta valnötterna torrt i en annan panna.' },
+      { t: 'Skär bort fettkanten på kotletterna. Stek i resten av oljan, 3 min per sida. Vila 3 min.' },
+      { t: 'Toppa kålen med valnötterna, servera med en klick dijon.' }
     ],
     temp: 'Fläskkotlett: 63–65°.',
     box: 'Bra. Kålen blir godare dagen efter. Håller 3 dagar.',
     boxOk: true,
-    upgrade: 'Stek några skivor bacon krispigt och smula över kålen.',
-    mageSwap: 'Byt vitkålen mot haricots verts eller zucchini och skippa löken.',
-    dairyAlt: 'Byt crème fraichen mot 1 msk olivolja vispad med senap och lite äppelcidervinäger.'
+    upgrade: 'En klick crème fraiche rörd med senap (≈ +5 g mättat fett) eller färsk timjan stekt i oljan.',
+    mageSwap: 'Byt vitkålen mot haricots verts eller zucchini och skippa löken.'
   },
   {
     id: 'rod-linssoppa',
@@ -410,7 +410,7 @@ window.SEED_RECIPES = [
     lines: [
       { id: 'linser', g: 25, role: 'protein' },
       { id: 'fetaost', g: 50, role: 'protein' },
-      { id: 'olivolja', g: 15, role: 'fat', note: 'fräsning' },
+      { id: 'rapsolja', g: 15, role: 'fat', note: 'fräsning' },
       { id: 'paprika', g: 80, role: 'main' },
       { id: 'blomkal', g: 60, role: 'main' },
       { id: 'krossadetomater', g: 100, role: 'side' },
@@ -440,6 +440,7 @@ window.SEED_RECIPES = [
 /* Färdiga förslag till Bygg din tallrik (gram per din portion). */
 window.PLATE_PRESETS = {
   frukost: [
+    { name: 'Betaglukanflingor, blåbär & valnötter (dagsranson)', items: [['bgflingor', 40], ['filmjolk', 150], ['blabar', 100], ['valnot', 10]] },
     { name: 'Havregrynsgröt med blåbär & valnötter', items: [['havregryn', 40], ['havrekli', 10], ['blabar', 100], ['valnot', 15], ['havredryck', 150]] },
     { name: 'Turkisk yoghurt, hallon & pumpafrön', items: [['turkyog', 150], ['hallon', 100], ['pumpafron', 15]] },
     { name: 'Kvarg med äpple, kanel & mandel', items: [['kvarg', 200], ['apple', 100], ['mandel', 15]] },
