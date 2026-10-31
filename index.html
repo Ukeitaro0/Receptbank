@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Receptbank</title>
+  <meta name="theme-color" content="#2f6b4f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Receptbank">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app"></main>
+  <nav id="nav">
+    <a href="#/vecka" data-tab="vecka"><span>📅</span>Vecka</a>
+    <a href="#/forslag" data-tab="forslag"><span>💡</span>Förslag</a>
+    <a href="#/recept" data-tab="recept"><span>📖</span>Recept</a>
+    <a href="#/tallrik" data-tab="tallrik"><span>🍽</span>Tallrik</a>
+    <a href="#/mer" data-tab="mer"><span>⚙️</span>Mer</a>
+  </nav>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="js/data.js"></script>
+  <script src="js/recipes.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
