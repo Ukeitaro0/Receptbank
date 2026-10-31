@@ -133,7 +133,7 @@
     return [...hits];
   }
 
-  /* Mallcheck: räknar fram proteingrupp, fettkällor, grönsaker, kolhydrat, kostnad och flaggor. */
+  /* Mallcheck: räknar fram proteingrupp, fettkällor, grönsaker, kolhydrat och flaggor. */
   function analyze(r) {
     const lines = r.lines || [];
     const n = N0(); let cost = 0, costEco = 0;
@@ -245,18 +245,6 @@
     const avoid = avoidHits(r);
     if (avoid.length) notes.push(['err', `Innehåller något du undviker: ${avoid.join(', ')}.`]);
 
-    /* Kostnad */
-    const p = S.profile;
-    if (cost > p.costMax) {
-      const cur = prot[0] && ing(prot[0].id);
-      let tip = '';
-      if (cur && cur.g) {
-        const alt = DB.list.filter((i) => i.g === cur.g && i.id !== cur.id && i.pg && (i.p * i.pg) / 1000 < lineCost(cur.id, prot[0].g) - 2)
-          .sort((a, b) => a.p * a.pg - b.p * b.pg).slice(0, 2);
-        if (alt.length) tip = ` Billigare i grupp ${cur.g}: ${alt.map((i) => `${i.name} (${kr((i.p * i.pg) / 1000)}/portion)`).join(', ')}.`;
-      }
-      notes.push(['warn', `${kr(cost)}/portion – över riktmärket ${p.costMin}–${p.costMax} kr.${tip}`]);
-    }
 
     const level = rows.some((x) => x.s === 'err') || notes.some((x) => x[0] === 'err') ? 'err' : rows.some((x) => x.s === 'warn') || notes.some((x) => x[0] === 'warn') ? 'warn' : 'ok';
     return { n, cost, costEco, group, fatReq, fatUnits, mainG, rows, notes, dairy, mage, avoid, level };
@@ -279,13 +267,9 @@
   const badge = (s) => `<span class="st st-${s}">${STATUS_ICON[s]}</span>`;
   const chip = (t, cls = '') => `<span class="chip ${cls}">${t}</span>`;
   const stepper = (key, val, min = 0) => `<span class="stepper" data-key="${key}"><button data-d="-1" ${val <= min ? 'disabled' : ''} aria-label="minska">−</button><b>${val}</b><button data-d="1" aria-label="öka">+</button></span>`;
-  function costChip(cost) {
-    const p = S.profile; const cls = cost > p.costMax ? 'chip-bad' : cost < p.costMin ? 'chip-good' : '';
-    return chip(`${kr(cost)}/port`, cls);
-  }
   function recipeChips(r, a) {
     const satC = S.profile.ldl ? chip(`mättat ${fmt(a.n[4])} g`, a.n[4] <= S.profile.satDinner ? 'chip-good' : a.n[4] > S.profile.satDinner * 1.15 ? 'chip-bad' : '') : '';
-    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), costChip(a.cost), satC,
+    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), satC,
       r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.mage ? chip('mage', 'chip-info') : '', a.dairy ? chip('mejeri', 'chip-info') : '',
       a.avoid.length ? chip('undvik!', 'chip-bad') : '', r.boxOk === false ? chip('ej matlåda', 'chip-info') : ''].join('');
   }
@@ -310,12 +294,12 @@
   function viewWeek(_, q) {
     const off = +(q.get('w') || 0);
     const days = weekDays(off);
-    let total = 0, count = 0;
+    let count = 0;
     const rows = days.map((d) => {
       const r = S.plan[d] && getRecipe(S.plan[d]);
       const isToday = d === today();
       if (r) {
-        const a = analyze(r); total += a.cost * portions(S.profile.hh) + kidCost(r, S.profile.hh); count++;
+        const a = analyze(r); count++;
         return `<div class="day ${isToday ? 'today' : ''}">
           <div class="day-h"><b>${dayName(d)}</b> <span class="muted">${shortDate(d)}</span></div>
           <a class="day-r" href="#/r/${encodeURIComponent(r.id)}?d=${d}"><b>${esc(r.title)}</b><div class="chips">${recipeChips(r, a)}</div></a>
@@ -338,7 +322,6 @@
       <div class="days">${rows}</div>
       <div class="card sum">
         <div><span class="muted">Planerat</span><b>${count} middagar</b></div>
-        <div><span class="muted">Kostnad, hela satser</span><b>${kr(total)}</b></div>
         <a class="btn" href="#/inkop?w=${off}">🛒 Inköpslista</a>
       </div>
       ${S.profile.ldl && count ? weekBalance(days) : ''}
@@ -360,11 +343,10 @@
     const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlådor`); if (hh.kids) p.push(`${hh.kids} barn`); if (hh.big) p.push(`${hh.big} storbarn`);
     return `${p.join(' + ')} = ${fmt(portions(hh))} portioner`;
   }
-  function kidCost(r, hh) { return r.kid ? lineCost(r.kid.id, kidGrams(r, hh)) : 0; }
   function kidGrams(r, hh) { return r.kid ? r.kid.child * hh.kids + r.kid.big * hh.big : 0; }
 
   /* ================= Förslag ================= */
-  const SG = { d: null, maxTime: 40, group: 0, maxCost: 0, have: '', lyx: false, shown: [], seen: new Set(), key: '' };
+  const SG = { d: null, maxTime: 40, group: 0, have: '', lyx: false, shown: [], seen: new Set(), key: '' };
   function haveTokens() { return SG.have.split(/[,\n]+|\s{2,}/).map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3); }
   function haveMatches(r) {
     const toks = haveTokens(); if (!toks.length) return [];
@@ -378,7 +360,7 @@
     const wkOther = weekDays(wkOff).map((x) => x !== SG.d && S.plan[x] && getRecipe(S.plan[x])).filter(Boolean);
     const near = new Set(); for (let i = -10; i <= 10; i++) { const d = addDays(SG.d, i); if (i && S.plan[d]) near.add(S.plan[d]); }
     return allRecipes().map((r) => ({ r, a: analyze(r) })).filter(({ r, a }) =>
-      !a.avoid.length && r.active <= SG.maxTime && (!SG.group || a.group === SG.group) && (!SG.maxCost || a.cost <= SG.maxCost))
+      !a.avoid.length && r.active <= SG.maxTime && (!SG.group || a.group === SG.group))
       .map((c) => {
         const m = haveMatches(c.r);
         let score = Math.random() + m.length * 3;
@@ -429,7 +411,6 @@
         <label>Dag <select id="sg-d">${days.map((x) => `<option value="${x}" ${x === SG.d ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] ? ' ●' : ''}</option>`).join('')}</select></label>
         <label>Max aktiv tid <select id="sg-t">${[15, 20, 30, 40, 90].map((t) => `<option value="${t}" ${t === SG.maxTime ? 'selected' : ''}>${t === 90 ? 'Ingen gräns' : t + ' min'}</option>`).join('')}</select></label>
         <label>Protein <select id="sg-g"><option value="0">Alla</option>${[1, 2, 3, 4].map((g) => `<option value="${g}" ${g === SG.group ? 'selected' : ''}>G${g} ${GROUP_NAME[g].toLowerCase()}</option>`).join('')}</select></label>
-        <label>Max kr/portion <select id="sg-c">${[0, 25, 35, 45].map((c) => `<option value="${c}" ${c === SG.maxCost ? 'selected' : ''}>${c ? c + ' kr' : 'Ingen gräns'}</option>`).join('')}</select></label>
         <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
         <label class="check"><input type="checkbox" id="sg-l" ${SG.lyx ? 'checked' : ''}> Vardagslyx / fredag</label>
       </div>
@@ -440,7 +421,6 @@
     $('#sg-d').onchange = (e) => go(`#/forslag?d=${e.target.value}`);
     $('#sg-t').onchange = (e) => { SG.maxTime = +e.target.value; refilter(); };
     $('#sg-g').onchange = (e) => { SG.group = +e.target.value; refilter(); };
-    $('#sg-c').onchange = (e) => { SG.maxCost = +e.target.value; refilter(); };
     $('#sg-l').onchange = (e) => { SG.lyx = e.target.checked; refilter(); };
     $('#sg-h').onchange = (e) => { SG.have = e.target.value; refilter(); };
     const all = $('#sg-all'); if (all) all.onclick = () => {
@@ -487,7 +467,6 @@
     if (!r) { app().innerHTML = '<p>Receptet finns inte.</p><a href="#/recept">Till recepten</a>'; return; }
     const d = q.get('d'); const preview = q.get('preview');
     const a = analyze(r); const P = portions(VHH);
-    const totCost = a.cost * P + kidCost(r, VHH), totEco = a.costEco * P + (r.kid ? lineCost(r.kid.id, kidGrams(r, VHH), true) : 0);
     const roles = ['protein', 'fat', 'main', 'side', 'carb', 'other'];
     const ingRows = roles.map((role) => {
       const ls = r.lines.filter((l) => l.role === role); if (!ls.length) return '';
@@ -499,7 +478,6 @@
     const fats = r.lines.filter((l) => l.role === 'fat');
     const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> för satsen <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
     const kidG = kidGrams(r, VHH);
-    const ecoTips = [...new Set([...r.lines.map((l) => l.id), r.kid && r.kid.id].filter((id) => id && ing(id).ecoTip))].map((id) => `<li><b>${esc(ing(id).name)}:</b> ${esc(ing(id).ecoTip)}</li>`).join('');
     const n = a.n; const satPct = Math.min(100, (n[4] / S.profile.satBudget) * 100);
     const planned = Object.keys(S.plan).filter((x) => S.plan[x] === r.id && x >= today()).sort()[0];
 
@@ -556,16 +534,6 @@
         <p>${esc(r.box || '–')}</p>
       </section>
 
-      <section class="card">
-        <h2>Kostnad</h2>
-        <div class="cost">
-          <div><span class="muted">Hela satsen</span><b>${kr(totCost)}</b><span class="muted small">eko: ${kr(totEco)}</span></div>
-          <div><span class="muted">Per vuxenportion</span><b>${kr(a.cost)}</b><span class="muted small">eko: ${kr(a.costEco)}</span></div>
-          <div><span class="muted">Riktmärke</span><b>${S.profile.costMin}–${S.profile.costMax} kr</b><span class="small ${a.cost > S.profile.costMax ? 'bad' : 'good'}">${a.cost > S.profile.costMax ? 'Över' : 'Inom'}</span></div>
-        </div>
-        ${ecoTips ? `<h3>Eko – värt det?</h3><ul class="plain small">${ecoTips}</ul>` : ''}
-        <p class="muted small">Ordinarie pris, grovt uppskattat. Priser kan ändras under Mer → Egna ingredienser.</p>
-      </section>
 
       <section class="card">
         <h2>Näring per vuxenportion</h2>
@@ -611,7 +579,7 @@
     if (r.kid) L.push('', '## Tillbehör Viggo/storbarn', `- ${ing(r.kid.id).name}: Viggo ${amountText(r.kid.id, r.kid.child)}, storbarn ${amountText(r.kid.id, r.kid.big)}/person. ${r.kid.how}`);
     L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
     if (r.temp) L.push(`Kärntemp: ${r.temp}`);
-    L.push('', `## Matlåda`, r.box || '–', '', `## Kostnad`, `- Hela satsen ca ${kr(a.cost * P + kidCost(r, VHH))}, ${kr(a.cost)}/vuxenportion (eko ${kr(a.costEco)})`);
+    L.push('', '## Matlåda', r.box || '–');
     if (r.upgrade) L.push('', `## Vardagslyx-växeln`, r.upgrade);
     return L.join('\n');
   }
@@ -749,7 +717,7 @@
   function rerender() { const y = window.scrollY; viewBuilder([DRAFT_SRC]); window.scrollTo(0, y); }
   function renderCheck() {
     const a = analyze(Object.assign({ title: '' }, DRAFT));
-    $('#bcheck').innerHTML = `<div class="bc-head">${badge(a.level)} <b>Mallcheck</b> <span class="muted">${kr(a.cost)}/portion · ${Math.round(a.n[0])} kcal · mättat ${fmt(a.n[4])} g</span></div>
+    $('#bcheck').innerHTML = `<div class="bc-head">${badge(a.level)} <b>Mallcheck</b> <span class="muted">${Math.round(a.n[0])} kcal · mättat ${fmt(a.n[4])} g</span></div>
       <table class="check small">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
       ${a.notes.length ? `<ul class="notes small">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}`;
   }
@@ -793,7 +761,7 @@
         sugg.push(`<button class="chip-btn${ps.fav ? ' hl' : ''}" data-preset="${k}" data-m="${m}">${ps.fav ? '★ ' : ''}${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
       });
       return `<section class="card meal">
-        <div class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor · ${kr(c.cost)}</span></div>
+        <div class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor</span></div>
         ${c.items.length ? `<div class="pitems">${c.items.map((x) => `<div class="pitem">
           <span class="pn">${x.it.r ? `<a href="#/r/${encodeURIComponent(x.it.r)}">${esc(x.name)}</a>` : esc(x.name)}</span>
           ${x.it.r ? `<span class="pq">${stepperPortion(m, x.ix, x.it.f)}</span>` : `<span class="pq"><input type="number" inputmode="numeric" value="${x.it.g}" data-m="${m}" data-ix="${x.ix}"> g</span>`}
@@ -809,7 +777,7 @@
         <h1>${day === today() ? 'Bygg din tallrik' : `${dayName(day)} ${shortDate(day)}`}</h1>
         <a class="btn ghost" href="#/tallrik?d=${addDays(day, 1)}">›</a>
       </div>
-      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : `<p class="muted small center">Sätt ihop dagens måltider och se direkt mättat fett, kolesterol, betaglukan och kostnad.</p>`}
+      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : `<p class="muted small center">Sätt ihop dagens måltider och se direkt mättat fett, kolesterol och betaglukan.</p>`}
       <section class="card summary">
         <h2>Mättat fett i dag</h2>
         <div class="big ${over ? 'bad' : ''}"><b>${fmt(sat)}</b> / ${p.satBudget} g</div>
@@ -819,8 +787,8 @@
         <div class="kpis">
           <div class="${tot.n[5] > p.cholGoal ? 'bad' : ''}"><span>Kolesterol</span><b>${Math.round(tot.n[5])} mg</b><small>mål under ${p.cholGoal} mg</small></div>
           <div class="${tot.n[6] >= p.bgGoal ? 'good' : ''}"><span>Betaglukan</span><b>${fmt(tot.n[6])} g</b><small>mål minst ${p.bgGoal} g</small></div>
-          <div><span>Kostnad</span><b>${kr(tot.cost)}</b><small>ca, din portion</small></div>
-          <div><span>Energi</span><b>${Math.round(tot.n[0])}</b><small>kcal · ${fmt(tot.n[1], 0)} g protein</small></div>
+          <div><span>Energi</span><b>${Math.round(tot.n[0])}</b><small>kcal</small></div>
+          <div><span>Protein</span><b>${fmt(tot.n[1], 0)} g</b><small>fett ${fmt(tot.n[2], 0)} g · kolh ${fmt(tot.n[3], 0)} g</small></div>
         </div>
       </section>
       ${isEmpty && day !== today() && S.plates[addDays(day, -1)] ? `<button class="btn ghost full" id="copy-prev">Kopiera gårdagens tallrik</button>` : ''}
@@ -869,14 +837,13 @@
     const groups = {};
     Object.entries(tot).forEach(([id, g]) => { const a = ing(id).a || 'Övrigt'; (groups[a] = groups[a] || []).push([id, g]); });
     const order = Object.values(DB.aisles).concat('Övrigt');
-    let cost = 0; Object.entries(tot).forEach(([id, g]) => !checked[id] && (cost += lineCost(id, g)));
     app().innerHTML = `
       <a class="back" href="#/vecka?w=${off}">‹ Veckan</a>
       <h1>Inköpslista v${isoWeek(wk)}</h1>
       ${used.length ? `<p class="muted small">${used.map(esc).join(' · ')}</p><p class="muted small">Räknat på ${hhText(hh)}. Bocka av det du redan har hemma.</p>` : '<p>Inga middagar planerade den här veckan.</p>'}
       ${order.filter((a) => groups[a]).map((a) => `<section class="card"><h2>${a}</h2><ul class="shop">${groups[a].sort((x, y) => ing(x[0]).name.localeCompare(ing(y[0]).name, 'sv')).map(([id, g]) =>
         `<li class="${checked[id] ? 'done' : ''}"><label><input type="checkbox" data-id="${id}" ${checked[id] ? 'checked' : ''}> <span>${esc(ing(id).name)}</span> <span class="amt">${amount(id, g)}</span></label></li>`).join('')}</ul></section>`).join('')}
-      ${used.length ? `<div class="card sum"><div><span class="muted">Kvar att handla, ca</span><b>${kr(cost)}</b></div><button class="btn" id="cp-shop">⧉ Kopiera listan</button></div>` : ''}`;
+      ${used.length ? `<div class="card sum"><button class="btn" id="cp-shop">⧉ Kopiera listan</button></div>` : ''}`;
     $$('.shop input', app()).forEach((c) => c.onchange = () => { checked[c.dataset.id] = c.checked; if (!c.checked) delete checked[c.dataset.id]; save(); const y = window.scrollY; viewShop(_, q); window.scrollTo(0, y); });
     const cp = $('#cp-shop'); if (cp) cp.onclick = () => copyText(order.filter((a) => groups[a]).map((a) => `${a}\n` + groups[a].filter(([id]) => !checked[id]).map(([id, g]) => `- ${ing(id).name} ${amountText(id, g)}`).join('\n')).join('\n\n'));
   }
@@ -918,35 +885,30 @@
           <label>Kolesterol under <input type="number" data-num="cholGoal" value="${p.cholGoal}"> mg</label>
           <label>Betaglukan minst <input type="number" data-num="bgGoal" value="${p.bgGoal}"> g</label>
         </div>
-        <div class="row">
-          <label>Kostnad/portion från <input type="number" data-num="costMin" value="${p.costMin}"> kr</label>
-          <label>till <input type="number" data-num="costMax" value="${p.costMax}"> kr</label>
-        </div>
       </section>
       <section class="card" id="claude">
         <h2>Nytt recept med Claude</h2>
         <ol class="small">
           <li>Kopiera instruktionen och klistra in i Claude-projektet tillsammans med din önskan ("något med sej, 20 min").</li>
           <li>Godkänn förslaget i chatten och be om receptet som JSON.</li>
-          <li>Klistra in svaret här nedan. Appen räknar mall, fett, kostnad och makron själv.</li>
+          <li>Klistra in svaret här nedan. Appen räknar mall, fett och makron själv.</li>
         </ol>
         <button class="btn" id="cp-prompt">⧉ Kopiera instruktion till Claude</button>
         <textarea id="imp-json" rows="5" placeholder='Klistra in Claudes JSON-svar här'></textarea>
         <button class="btn primary" id="imp-go">Importera recept</button>
       </section>
       <section class="card" id="ing">
-        <h2>Egna ingredienser & priser</h2>
-        <p class="muted small">Lägg till det som saknas, eller skriv in samma namn som en befintlig för att ändra pris/värden. Näring per 100 g.</p>
+        <h2>Egna ingredienser</h2>
+        <p class="muted small">Lägg till det som saknas, eller skriv in samma namn som en befintlig för att ändra dess värden. Näring per 100 g.</p>
         <div class="ingform">
           <label class="wide">Namn <input id="ci-name" list="ci-list"><datalist id="ci-list">${DB.list.map((i) => `<option value="${esc(i.name)}">`).join('')}</datalist></label>
           <label>Typ <select id="ci-cat"><option value="protein">Protein</option><option value="fat">Fett</option><option value="veg-main">Huvudgrönsak</option><option value="veg-side">Sidogrönsak</option><option value="carb">Kolhydrat (mall)</option><option value="kid">Barntillbehör</option><option value="other">Övrigt</option></select></label>
           <label>Proteingrupp <select id="ci-g"><option value="">–</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
           ${['kcal', 'protein', 'fett', 'kolhydrat', 'mättat fett', 'kolesterol mg', 'betaglukan'].map((x, k) => `<label>${x} <input type="number" step="any" data-n="${k}" value="0"></label>`).join('')}
-          <label>Pris kr/kg <input type="number" id="ci-p" value="0"></label>
           <label>1 × fettkälla = <input type="number" id="ci-fu" placeholder="g"> g</label>
         </div>
         <button class="btn" id="ci-add">Spara ingrediens</button>
-        ${S.customIng.length ? `<ul class="plain small">${S.customIng.map((i) => `<li>${esc(i.name)} · ${i.p} kr/kg <button class="btn sm ghost" data-rmi="${i.id}">✕</button></li>`).join('')}</ul>` : ''}
+        ${S.customIng.length ? `<ul class="plain small">${S.customIng.map((i) => `<li>${esc(i.name)} <button class="btn sm ghost" data-rmi="${i.id}">✕</button></li>`).join('')}</ul>` : ''}
       </section>
       <section class="card">
         <h2>Backup & flytta mellan enheter</h2>
@@ -982,7 +944,7 @@
     const name = $('#ci-name').value.trim(); if (!name) return toast('Ange namn');
     const existing = DB.list.find((i) => i.name.toLowerCase() === name.toLowerCase());
     const cat = $('#ci-cat').value; const n = $$('[data-n]', app()).map((x) => +x.value || 0);
-    const o = existing ? Object.assign(clone(existing), { p: +$('#ci-p').value || existing.p }) : { id: 'c-' + slug(name), name, cat: cat.split('-')[0], n, p: +$('#ci-p').value || 0, a: 'Övrigt' };
+    const o = existing ? Object.assign(clone(existing), { p: existing.p }) : { id: 'c-' + slug(name), name, cat: cat.split('-')[0], n, p: 0, a: 'Övrigt' };
     if (existing && n.some((x) => x)) o.n = n;
     if (!existing) {
       if (cat === 'veg-main') o.veg = 'main'; if (cat === 'veg-side') o.veg = 'side';

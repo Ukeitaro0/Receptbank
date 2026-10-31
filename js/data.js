@@ -189,7 +189,7 @@
   ing('yoghurt05', 'Naturell yoghurt 0,5 %', 'other', [40, 4.5, 0.5, 5, 0.3, 2, 0], 22, { dairy: true, a: A.mejeri });
   ing('filmjolk', 'Filmjölk 3 %', 'other', [60, 3.5, 3, 4.5, 1.9, 10, 0], 18, { dairy: true, a: A.mejeri });
   ing('havrekli', 'Havrekli', 'other', [380, 17, 7, 50, 1.3, 0, 8], 45, { a: A.skafferi });
-  ing('bgflingor', 'BetaVivo havreflingor (Original)', 'other', [332, 20, 4.4, 38, 0.8, 0, 15], 190, { a: A.skafferi });
+  ing('bgflingor', 'BetaVivo havreflingor (Original)', 'other', [332, 20, 4.4, 38, 0.8, 0, 15], 190, { pcs: 20, pcsN: 'portion (0,9 dl)', a: A.skafferi });
   ing('kaffe', 'Kaffe med mjölkskvätt', 'other', [10, 0.5, 0.5, 0.7, 0.3, 2, 0], 12, { a: A.skafferi });
 
   window.DB = { list: L, aisles: A };
