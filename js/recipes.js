@@ -193,7 +193,7 @@ window.SEED_RECIPES = [
     box: 'Bra kall som lunchsallad. Halloumin blir seg kall – värm den kort eller byt mot feta i lådan.',
     boxOk: true,
     upgrade: 'Granatäppelkärnor och en klick tahini-yoghurt.',
-    mageSwap: 'Halvera kikärtorna och skölj dem väl, byt rödlöken mot gräslök.'
+    mageSwap: 'Byt kikärtorna mot vita bönor, eller halloumin mot fetaost.'
   },
   {
     id: 'korv-langpanna',
@@ -433,7 +433,7 @@ window.SEED_RECIPES = [
     box: 'Utmärkt. Håller 4 dagar i kyl, fryser i 3 månader. Feta separat.',
     boxOk: true,
     upgrade: 'Toppa med chiliolja och rostade pumpafrön.',
-    mageSwap: 'Byt blomkålen mot zucchini. Linserna är bara 25 g/portion – oftast snällt.'
+    mageSwap: 'Byt blomkålen mot zucchini eller mer paprika.'
   }
 ];
 

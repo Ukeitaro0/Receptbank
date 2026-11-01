@@ -27,7 +27,7 @@
   const DEFAULT_STATE = {
     v: 1,
     profile: {
-      hh: { adults: 3, boxes: 2, kids: 1, big: 0 },
+      hh: { adults: 3, boxes: 2, kids: 1 },
       likes: [],
       avoid: ['Aubergine'],
       allergies: [],
@@ -47,6 +47,7 @@
         const m = Object.assign(clone(DEFAULT_STATE), s);
         m.profile = Object.assign(clone(DEFAULT_STATE.profile), s.profile || {});
         m.profile.hh = Object.assign(clone(DEFAULT_STATE.profile.hh), (s.profile || {}).hh || {});
+        if (m.profile.hh.big) m.profile.hh.adults += m.profile.hh.big; delete m.profile.hh.big; // storbarn = vuxna
         return m;
       }
     } catch (e) { /* trasig data – börja om */ }
@@ -94,21 +95,29 @@
     return Math.round(g / 50) * 50;
   }
   const half = (x) => Math.round(x * 2) / 2;
+  const FRAC = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+  function frac(x) {
+    const w = Math.floor(x), f = Math.round((x - w) * 4) / 4;
+    if (f === 1) return String(w + 1);
+    return (w ? String(w) : '') + (f ? FRAC[f] : '') || '0';
+  }
+  const PLURAL = { klyfta: 'klyftor', 'tärning': 'tärningar', skiva: 'skivor', huvud: 'huvuden', kruka: 'krukor', burk: 'burkar', 'påse': 'påsar', ask: 'askar', knippe: 'knippen', filé: 'filéer', bit: 'bitar', paket: 'paket', 'stjälk': 'stjälkar', 'portion (0,9 dl)': 'portioner (0,9 dl)' };
   function amount(id, g) {
     const i = ing(id); const r = roundG(g);
     const w = r >= 1000 ? `${fmt(r / 1000, 2)} kg` : `${r} g`;
     if (i.msk && g <= 200) {
       const m = half(g / i.msk);
-      if (m >= 0.5 && m <= 6) return `${fmt(m)} msk <span class="muted">(${w})</span>`;
+      if (m >= 0.5 && m <= 6) return `${fmt(m)} msk <span class="muted">${w}</span>`;
     }
     if (i.pcs) {
-      const p = i.pcs <= 15 ? Math.max(1, Math.round(g / i.pcs)) : half(g / i.pcs);
-      const PL = { klyfta: 'klyftor', 'tärning': 'tärningar', skiva: 'skivor', huvud: 'huvuden' };
-      if (p >= 0.5) return `${w} <span class="muted">(≈ ${fmt(p)} ${p > 1 ? PL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st'})</span>`;
+      const x = g / i.pcs;
+      const q = i.pcs <= 15 ? Math.max(1, Math.round(x)) : x < 1 ? Math.max(0.25, Math.round(x * 4) / 4) : Math.round(x * 2) / 2;
+      const unit = q > 1 ? PLURAL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st';
+      return `≈ ${frac(q)} ${unit} <span class="muted">${w}</span>`;
     }
     return w;
   }
-  const amountText = (id, g) => amount(id, g).replace(/<[^>]+>/g, '');
+  const amountText = (id, g) => amount(id, g).replace(/<span class="muted">/g, '(').replace(/<\/span>/g, ')').replace(/<[^>]+>/g, '');
 
   /* ================= Recept ================= */
   function allRecipes() {
@@ -119,7 +128,7 @@
     return Object.values(m).sort((a, b) => a.title.localeCompare(b.title, 'sv'));
   }
   const getRecipe = (id) => allRecipes().find((r) => r.id === id);
-  const portions = (hh) => hh.adults + hh.boxes + hh.big + hh.kids * KID;
+  const portions = (hh) => hh.adults + hh.boxes + hh.kids * KID;
 
   function profileTokens() {
     return [...S.profile.avoid, ...S.profile.allergies].map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3);
@@ -231,15 +240,7 @@
     const dairy = fatUnits > 0 && dairyUnits / fatUnits >= 0.5;
     if (dairy) notes.push(['info', `Mejeri-gråzon: ${fmt(dairyUnits, 2)} av ${fmt(fatUnits, 2)} fettkällor är mejeri. ${r.dairyAlt ? 'Mejerifritt: ' + r.dairyAlt : 'Byt t.ex. grädde/ost mot olivolja, kokosmjölk eller nötter.'}`]);
 
-    /* Magkänsligt */
-    const mageLines = lines.filter((l) => ing(l.id).mage);
-    const mageG = mageLines.reduce((s, l) => s + l.g, 0);
-    const mage = mageG >= 100;
-    if (mage) {
-      const nm = mageLines.map((l) => ing(l.id).name.toLowerCase());
-      const gen = [nm.some((x) => /kål|broccoli/.test(x)) && 'kål → zucchini/haricots verts', nm.some((x) => /lök/.test(x)) && 'lök → gräslök', nm.some((x) => /ärt|bön|lins/.test(x)) && 'baljväxter → halvera, skölj väl'].filter(Boolean).join(', ');
-      notes.push(['info', `Magkänsligt: ${nm.join(', ')} (${roundG(mageG)} g/portion). ${r.mageSwap || 'Byt ' + gen + '.'}`]);
-    }
+    const mage = false;
 
     /* Undvik / allergier */
     const avoid = avoidHits(r);
@@ -267,11 +268,9 @@
   const badge = (s) => `<span class="st st-${s}">${STATUS_ICON[s]}</span>`;
   const chip = (t, cls = '') => `<span class="chip ${cls}">${t}</span>`;
   const stepper = (key, val, min = 0) => `<span class="stepper" data-key="${key}"><button data-d="-1" ${val <= min ? 'disabled' : ''} aria-label="minska">−</button><b>${val}</b><button data-d="1" aria-label="öka">+</button></span>`;
+  const satChip = (sat) => chip(`mättat ${fmt(sat)} g`, sat <= S.profile.satDinner ? 'chip-good' : sat > S.profile.satDinner * 1.15 ? 'chip-bad' : '');
   function recipeChips(r, a) {
-    const satC = S.profile.ldl ? chip(`mättat ${fmt(a.n[4])} g`, a.n[4] <= S.profile.satDinner ? 'chip-good' : a.n[4] > S.profile.satDinner * 1.15 ? 'chip-bad' : '') : '';
-    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), satC,
-      r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.mage ? chip('mage', 'chip-info') : '', a.dairy ? chip('mejeri', 'chip-info') : '',
-      a.avoid.length ? chip('undvik!', 'chip-bad') : '', r.boxOk === false ? chip('ej matlåda', 'chip-info') : ''].join('');
+    return [chip(`⏱ ${r.active} min`), S.profile.ldl ? satChip(a.n[4]) : '', r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.avoid.length ? chip('undvik!', 'chip-bad') : ''].join('');
   }
 
   /* ================= Router ================= */
@@ -340,10 +339,13 @@
     </div></div>`;
   }
   function hhText(hh) {
-    const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlådor`); if (hh.kids) p.push(`${hh.kids} barn`); if (hh.big) p.push(`${hh.big} storbarn`);
-    return `${p.join(' + ')} = ${fmt(portions(hh))} portioner`;
+    return `${hhShort(hh)} = ${fmt(portions(hh))} portioner`;
   }
-  function kidGrams(r, hh) { return r.kid ? r.kid.child * hh.kids + r.kid.big * hh.big : 0; }
+  function hhShort(hh) {
+    const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlåd${hh.boxes > 1 ? 'or' : 'a'}`); if (hh.kids) p.push(hh.kids > 1 ? `${hh.kids} barn` : 'Viggo');
+    return p.join(' + ');
+  }
+  function kidGrams(r, hh) { return r.kid ? r.kid.child * hh.kids : 0; }
 
   /* ================= Förslag ================= */
   const SG = { d: null, maxTime: 40, group: 0, have: '', lyx: false, shown: [], seen: new Set(), key: '' };
@@ -387,16 +389,10 @@
     const days = weekDays(Math.round((parseISO(mondayOf(d)) - parseISO(mondayOf(today()))) / (7 * 864e5)));
     const cand = candidates(); const candMap = Object.fromEntries(cand.map((c) => [c.r.id, c]));
     const cards = SG.shown.map((id) => candMap[id] || (getRecipe(id) && { r: getRecipe(id), a: analyze(getRecipe(id)), m: haveMatches(getRecipe(id)) })).filter(Boolean).map(({ r, a, m }) => {
-      const pick = (role) => r.lines.filter((l) => l.role === role).map((l) => ing(l.id).name).join(', ');
       return `<div class="card sugg">
         <h3>${esc(r.title)}</h3>
         <p>${esc(r.why)}</p>
         <div class="chips">${recipeChips(r, a)}</div>
-        <ul class="mini">
-          <li><b>Protein</b> ${esc(pick('protein'))}</li>
-          <li><b>Grönt</b> ${esc([pick('main'), pick('side')].filter(Boolean).join(' · '))}</li>
-          <li><b>Kolhydrat</b> ${esc(pick('carb') || '–')}${r.kid ? ` · <span class="muted">Viggo: ${esc(ing(r.kid.id).name.toLowerCase())}</span>` : ''}</li>
-        </ul>
         ${m.length ? `<p class="have">✓ Har hemma: ${esc(m.join(', '))}</p>` : ''}
         <div class="btns">
           <button class="btn primary" data-ok="${esc(r.id)}">Godkänn för ${dayName(SG.d).toLowerCase()}</button>
@@ -409,10 +405,12 @@
       <h1>Förslag</h1>
       <div class="card filters">
         <label>Dag <select id="sg-d">${days.map((x) => `<option value="${x}" ${x === SG.d ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] ? ' ●' : ''}</option>`).join('')}</select></label>
+        <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
+        <details class="morefilt"${SG.maxTime !== 40 || SG.group || SG.lyx ? ' open' : ''}><summary>Fler filter</summary><div class="filters">
         <label>Max aktiv tid <select id="sg-t">${[15, 20, 30, 40, 90].map((t) => `<option value="${t}" ${t === SG.maxTime ? 'selected' : ''}>${t === 90 ? 'Ingen gräns' : t + ' min'}</option>`).join('')}</select></label>
         <label>Protein <select id="sg-g"><option value="0">Alla</option>${[1, 2, 3, 4].map((g) => `<option value="${g}" ${g === SG.group ? 'selected' : ''}>G${g} ${GROUP_NAME[g].toLowerCase()}</option>`).join('')}</select></label>
-        <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
         <label class="check"><input type="checkbox" id="sg-l" ${SG.lyx ? 'checked' : ''}> Vardagslyx / fredag</label>
+        </div></details>
       </div>
       ${cards || `<div class="card empty-state"><p>Inget recept matchar filtren.</p><p><a href="#/bygg">Bygg ett eget i mallbyggaren</a></p></div>`}
       ${cand.length > 3 ? `<button class="btn ghost full" id="sg-all">↻ Tre nya förslag</button>` : ''}
@@ -453,9 +451,9 @@
       <input class="search" id="lq" placeholder="Sök recept, ingrediens eller tagg" value="${esc(LIST_Q)}">
       <div class="seg">${[0, 1, 2, 3, 4].map((g) => `<button data-g="${g}" class="${g === LIST_G ? 'on' : ''}">${g ? 'G' + g : 'Alla'}</button>`).join('')}</div>
       <div class="list">${show.map(({ r, a }) => `<a class="card item" href="#/r/${encodeURIComponent(r.id)}">
-        <div class="item-t">${badge(a.level)} <b>${esc(r.title)}</b>${r.seed ? '' : ' <span class="muted small">(egen)</span>'}</div>
+        <div class="item-t"><b>${esc(r.title)}</b>${r.seed ? '' : ' <span class="muted small">(egen)</span>'}</div>
         <div class="chips">${recipeChips(r, a)}</div></a>`).join('') || '<p class="muted">Inga träffar.</p>'}</div>
-      <p class="muted small center">${rs.length} recept · ✓ följer mallen · ! avvikelse att titta på</p>`;
+      <p class="muted small center">${rs.length} recept</p>`;
     const lq = $('#lq'); lq.oninput = (e) => { LIST_Q = e.target.value; const pos = lq.selectionStart; viewList(); const n = $('#lq'); n.focus(); n.setSelectionRange(pos, pos); };
     $$('.seg button', app()).forEach((b) => b.onclick = () => { LIST_G = +b.dataset.g; viewList(); });
   }
@@ -472,91 +470,80 @@
       const ls = r.lines.filter((l) => l.role === role); if (!ls.length) return '';
       return `<tr class="grp"><th colspan="2">${ROLE_NAME[role]}</th></tr>` + ls.map((l) => {
         const i = ing(l.id);
-        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}${l.raw ? ' <span class="muted small">(rå)</span>' : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
+        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
       }).join('');
     }).join('');
     const fats = r.lines.filter((l) => l.role === 'fat');
-    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> för satsen <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
+    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
     const kidG = kidGrams(r, VHH);
-    const n = a.n; const satPct = Math.min(100, (n[4] / S.profile.satBudget) * 100);
+    const n = a.n;
     const planned = Object.keys(S.plan).filter((x) => S.plan[x] === r.id && x >= today()).sort()[0];
+    const issues = a.rows.filter((x) => x.s === 'warn' || x.s === 'err').length + a.notes.filter(([s]) => s === 'warn' || s === 'err').length;
 
     app().innerHTML = `
       <a class="back" href="${d ? '#/vecka' : '#/recept'}">‹ ${d ? 'Veckan' : 'Recepten'}</a>
       <h1>${esc(r.title)}</h1>
       <p class="why">${esc(r.why)}</p>
-      <div class="chips">${recipeChips(r, a)}${chip(`⏲ ${r.total} min totalt`)}</div>
+      <div class="chips">${chip(`⏱ ${r.active} min aktiv · ${r.total} min totalt`)}${S.profile.ldl ? satChip(n[4]) : ''}${r.lyx ? chip('✨ fredag', 'chip-lyx') : ''}${a.avoid.length ? chip('undvik!', 'chip-bad') : ''}</div>
       ${preview && d ? `<div class="card cta"><span>Passar den ${dayName(d).toLowerCase()}?</span><button class="btn primary" id="ok">Godkänn</button><a class="btn ghost" href="#/forslag?d=${d}">Tillbaka</a></div>` : ''}
 
       <section class="card">
-        <h2>Mallcheck <span class="muted small">per vuxenportion</span></h2>
-        <table class="check">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
-        ${a.notes.length ? `<ul class="notes">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}
-      </section>
-
-      <section class="card">
-        <h2>Ingredienser</h2>
-        <div class="scaler">
-          <label>Vuxna ${stepper('adults', VHH.adults)}</label>
-          <label>Matlådor ${stepper('boxes', VHH.boxes)}</label>
-          <label>Viggo ${stepper('kids', VHH.kids)}</label>
-          <label>Storbarn ${stepper('big', VHH.big)}</label>
+        <div class="ing-head">
+          <h2>Ingredienser</h2>
+          <details class="portions"><summary>${hhShort(VHH)}</summary>
+            <div class="scaler">
+              <label>Vuxna ${stepper('adults', VHH.adults)}</label>
+              <label>Matlådor ${stepper('boxes', VHH.boxes)}</label>
+              <label>Viggo ${stepper('kids', VHH.kids)}</label>
+            </div>
+            <button class="linkbtn" id="save-hh">Spara som standard</button>
+          </details>
         </div>
-        <p class="muted small">${hhText(VHH)} (barnportion ≈ ${KID} vuxen)</p>
         <table class="ing">${ingRows}</table>
-        <div class="fatbox">
-          <h3><span class="fatdot"></span> Fett i satsen – ${fmt(a.fatUnits * P, 1)} × fettkälla</h3>
-          <ul>${fatRows || '<li>Inget tillsatt fett.</li>'}</ul>
-          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion. Tillagnings- och tillbehörsfett räknas båda.${S.profile.ldl ? '<br><span class="fatdot t-green"></span>omättat <span class="fatdot t-yellow"></span>ost/mejeri <span class="fatdot t-red"></span>mättat' : ''}</p>
-        </div>
+        ${r.kid && kidG ? `<div class="kidline"><b>Till Viggo:</b> ${esc(ing(r.kid.id).name.toLowerCase())} ${amount(r.kid.id, kidG)}<span class="muted"> – lagas separat. ${esc(r.kid.how)}</span></div>` : ''}
+        ${r.mageSwap ? `<p class="alt">🔁 <b>Alternativ:</b> ${esc(r.mageSwap)}</p>` : ''}
+        <details class="fold"><summary><span class="fatdot"></span>Fett i satsen: ${fmt(a.fatUnits * P, 1)} × fettkälla</summary>
+          <ul class="fatlist">${fatRows || '<li>Inget tillsatt fett.</li>'}</ul>
+          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion.${S.profile.ldl ? ' <span class="fatdot t-green"></span>omättat <span class="fatdot t-yellow"></span>ost/mejeri <span class="fatdot t-red"></span>mättat' : ''}</p>
+        </details>
       </section>
-
-      ${r.kid ? `<section class="card">
-        <h2>Tillbehör Viggo / storbarnen</h2>
-        <p><b>${esc(ing(r.kid.id).name)}</b> – lagas separat, blandas aldrig i huvudrätten.</p>
-        <ul class="plain">
-          <li>Viggo: <b>${amount(r.kid.id, r.kid.child)}</b></li>
-          <li>Storbarn/vuxen som äter "vanligt": <b>${amount(r.kid.id, r.kid.big)}</b> per person</li>
-          ${kidG ? `<li>Totalt nu: <b>${amount(r.kid.id, kidG)}</b></li>` : '<li class="muted">Ingen satt till barn/storbarn just nu.</li>'}
-        </ul>
-        <p class="muted">${esc(r.kid.how)}</p>
-      </section>` : ''}
 
       <section class="card">
         <h2>Gör så här</h2>
         <ol class="steps">${r.steps.map((s) => `<li>${esc(s.t)}${s.wait ? `<div class="wait">⏳ ${esc(s.wait)}</div>` : ''}</li>`).join('')}</ol>
         ${r.temp ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}
-        ${r.double ? `<p class="double">×2 ${esc(r.double)}</p>` : ''}
       </section>
 
-      <section class="card">
-        <h2>Matlåda ${r.boxOk === false ? chip('passar dåligt', 'chip-bad') : ''}</h2>
-        <p>${esc(r.box || '–')}</p>
+      <section class="card tips">
+        <p>📦 <b>Matlåda${r.boxOk === false ? ' – passar dåligt' : ''}:</b> ${esc(r.box || '–')}</p>
+        ${r.double ? `<p>×2 <b>Laga dubbelt:</b> ${esc(r.double)}</p>` : ''}
+        ${r.upgrade ? `<p>✨ <b>Vardagslyx:</b> ${esc(r.upgrade)}</p>` : ''}
       </section>
 
+      <details class="card fold">
+        <summary>${badge(a.level)} Mallcheck <span class="muted small">${issues ? `${issues} att titta på` : 'följer mallen'}</span></summary>
+        <table class="check">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
+        ${a.notes.length ? `<ul class="notes">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}
+      </details>
 
-      <section class="card">
-        <h2>Näring per vuxenportion</h2>
+      <details class="card fold">
+        <summary>Näring per portion <span class="muted small">${Math.round(n[0])} kcal · ${fmt(n[1], 0)} g protein · ${fmt(n[4])} g mättat</span></summary>
         <div class="macros">
           <div><b>${Math.round(n[0])}</b><span>kcal</span></div><div><b>${fmt(n[1], 0)} g</b><span>protein</span></div>
           <div><b>${fmt(n[2], 0)} g</b><span>fett</span></div><div><b>${fmt(n[3], 0)} g</b><span>kolhydrat</span></div>
         </div>
-        <div class="bar"><div style="width:${satPct}%" class="${n[4] > S.profile.satBudget * 0.5 ? 'amber' : ''}"></div></div>
-        <p class="small">Mättat fett <b>${fmt(n[4])} g</b> = ${Math.round((n[4] / S.profile.satBudget) * 100)} % av dagsbudgeten ${S.profile.satBudget} g · Kolesterol ${Math.round(n[5])} mg · Betaglukan ${fmt(n[6])} g</p>
-      </section>
-
-      ${r.upgrade ? `<section class="card lyx"><h2>✨ Vardagslyx-växeln</h2><p>${esc(r.upgrade)}</p></section>` : ''}
+        <p class="small">Mättat fett <b>${fmt(n[4])} g</b> (${Math.round((n[4] / S.profile.satBudget) * 100)} % av dagens ${S.profile.satBudget} g) · Kolesterol ${Math.round(n[5])} mg · Betaglukan ${fmt(n[6])} g</p>
+      </details>
 
       <div class="actions">
-        <label class="planner">Planera <select id="plan-d"><option value="">välj dag…</option>${[...weekDays(0), ...weekDays(1)].map((x) => `<option value="${x}" ${x === (d || planned) ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] && S.plan[x] !== r.id ? ' (upptagen)' : ''}</option>`).join('')}</select></label>
-        <button class="btn" id="to-plate">🍽 Lägg på tallriken</button>
-        <a class="btn ghost" href="#/bygg/${encodeURIComponent(r.id)}">✎ Redigera</a>
-        <button class="btn ghost" id="cp">⧉ Kopiera som text</button>
-        <button class="btn ghost" id="save-hh">Spara portioner som standard</button>
-      </div>`;
+        <select id="plan-d" class="plan-sel"><option value="">📅 Planera…</option>${[...weekDays(0), ...weekDays(1)].map((x) => `<option value="${x}" ${x === (d || planned) ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] && S.plan[x] !== r.id ? ' (upptagen)' : ''}</option>`).join('')}</select>
+        <button class="btn primary" id="to-plate">🍽 Lägg på tallriken</button>
+      </div>
+      <p class="center small"><a href="#/bygg/${encodeURIComponent(r.id)}">✎ Redigera</a> · <a href="#" id="cp">⧉ Kopiera som text</a></p>`;
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => {
       VHH[s.dataset.key] = Math.max(0, VHH[s.dataset.key] + +b.dataset.d); const y = window.scrollY; route(); window.scrollTo(0, y);
+      const dd = $('details.portions'); if (dd) dd.open = true;
     }));
     const ok = $('#ok'); if (ok) ok.onclick = () => { S.plan[d] = r.id; save(); toast(`Planerad: ${dayName(d)}`); go(`#/r/${encodeURIComponent(r.id)}?d=${d}`); };
     $('#plan-d').onchange = (e) => { if (!e.target.value) return; S.plan[e.target.value] = r.id; save(); toast(`Planerad: ${dayName(e.target.value)} ${shortDate(e.target.value)}`); };
@@ -565,7 +552,7 @@
       pl.middag = pl.middag.filter((x) => !x.r); pl.middag.push({ r: r.id, f: 1 }); save();
       toast(`Middag ${shortDate(day)} lagd på tallriken`); go(`#/tallrik?d=${day}`);
     };
-    $('#cp').onclick = () => copyText(recipeText(r, a));
+    $('#cp').onclick = (e) => { e.preventDefault(); copyText(recipeText(r, a)); };
     $('#save-hh').onclick = () => { S.profile.hh = clone(VHH); save(); toast('Sparat som standard'); };
   }
 
@@ -576,7 +563,7 @@
     a.notes.forEach(([, t]) => L.push(`- OBS: ${t}`));
     L.push('', `## Ingredienser (${hhText(VHH)})`);
     r.lines.forEach((l) => L.push(`- ${amountText(l.id, l.g * P)} ${ing(l.id).name}${l.role === 'fat' ? ` [fettkälla ${fmt((l.g / (ing(l.id).fu || 15)) * P, 1)} ×]` : ''}${l.note ? ' – ' + l.note : ''}`));
-    if (r.kid) L.push('', '## Tillbehör Viggo/storbarn', `- ${ing(r.kid.id).name}: Viggo ${amountText(r.kid.id, r.kid.child)}, storbarn ${amountText(r.kid.id, r.kid.big)}/person. ${r.kid.how}`);
+    if (r.kid) L.push('', '## Till Viggo', `- ${ing(r.kid.id).name} ${amountText(r.kid.id, r.kid.child)} – lagas separat. ${r.kid.how}`);
     L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
     if (r.temp) L.push(`Kärntemp: ${r.temp}`);
     L.push('', '## Matlåda', r.box || '–');
@@ -586,7 +573,7 @@
 
   /* ================= Mallbyggare ================= */
   let DRAFT = null, DRAFT_SRC = null;
-  const blankRecipe = () => ({ id: '', title: '', why: '', active: 20, total: 30, tags: [], lines: [], kid: { id: 'potatis', child: 120, big: 250, how: '' }, steps: [], box: '', boxOk: true, upgrade: '', temp: '', double: '', mageSwap: '', dairyAlt: '', lyx: false });
+  const blankRecipe = () => ({ id: '', title: '', why: '', active: 20, total: 30, tags: [], lines: [], kid: { id: 'potatis', child: 120, how: '' }, steps: [], box: '', boxOk: true, upgrade: '', temp: '', double: '', mageSwap: '', dairyAlt: '', lyx: false });
   const PICK = {
     protein: (i) => i.g || i.g4, fat: (i) => i.fu, main: (i) => i.veg === 'main', side: (i) => i.veg === 'side',
     carb: (i) => i.carb || i.nomall, other: () => true
@@ -644,11 +631,10 @@
       ${section('carb', 'frivilligt, EN')}
       ${section('other', 'kryddor, soja, buljong…')}
       <section class="card">
-        <h2>Tillbehör Viggo / storbarn</h2>
+        <h2>Tillbehör till Viggo</h2>
         <div class="row">
           <label>Vad <select id="k-id"><option value="">– inget –</option>${kidOpts}</select></label>
           <label>Viggo <input type="number" id="k-child" value="${D.kid.child}"> g</label>
-          <label>Storbarn <input type="number" id="k-big" value="${D.kid.big}"> g</label>
         </div>
         <label class="wide">Hur det lagas parallellt <input id="k-how" value="${esc(D.kid.how)}"></label>
       </section>
@@ -663,7 +649,7 @@
         <label class="wide">Matlåda – hur den håller, värms, packas <textarea id="b-box" rows="2">${esc(D.box || '')}</textarea></label>
         <label class="check"><input type="checkbox" id="b-boxok" ${D.boxOk !== false ? 'checked' : ''}> Funkar som matlåda</label>
         <label class="wide">✨ Vardagslyx-växeln <input id="b-upgrade" value="${esc(D.upgrade || '')}"></label>
-        <label class="wide">Bytesförslag om magkänsligt <input id="b-mage" value="${esc(D.mageSwap || '')}"></label>
+        <label class="wide">Alternativ / byte (valfritt) <input id="b-mage" value="${esc(D.mageSwap || '')}"></label>
         <label class="wide">Mejerifritt alternativ <input id="b-dairy" value="${esc(D.dairyAlt || '')}"></label>
       </section>
       <div class="actions">
@@ -677,7 +663,7 @@
     bind('#b-title', (e) => (D.title = e.value)); bind('#b-why', (e) => (D.why = e.value));
     bind('#b-active', (e) => (D.active = +e.value || 0)); bind('#b-total', (e) => (D.total = +e.value || 0));
     bind('#b-lyx', (e) => (D.lyx = e.checked)); bind('#b-tags', (e) => (D.tags = e.value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)));
-    bind('#k-id', (e) => (D.kid.id = e.value)); bind('#k-child', (e) => (D.kid.child = +e.value || 0)); bind('#k-big', (e) => (D.kid.big = +e.value || 0)); bind('#k-how', (e) => (D.kid.how = e.value));
+    bind('#k-id', (e) => (D.kid.id = e.value)); bind('#k-child', (e) => (D.kid.child = +e.value || 0)); bind('#k-how', (e) => (D.kid.how = e.value));
     bind('#b-steps', (e) => (D.steps = e.value.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const [t, w] = x.split('||').map((y) => y.trim()); return w ? { t, wait: w } : { t }; })));
     bind('#b-temp', (e) => (D.temp = e.value)); bind('#b-double', (e) => (D.double = e.value)); bind('#b-box', (e) => (D.box = e.value));
     bind('#b-boxok', (e) => (D.boxOk = e.checked)); bind('#b-upgrade', (e) => (D.upgrade = e.value)); bind('#b-mage', (e) => (D.mageSwap = e.value)); bind('#b-dairy', (e) => (D.dairyAlt = e.value));
@@ -777,7 +763,7 @@
         <h1>${day === today() ? 'Bygg din tallrik' : `${dayName(day)} ${shortDate(day)}`}</h1>
         <a class="btn ghost" href="#/tallrik?d=${addDays(day, 1)}">›</a>
       </div>
-      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : `<p class="muted small center">Sätt ihop dagens måltider och se direkt mättat fett, kolesterol och betaglukan.</p>`}
+      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : ''}
       <section class="card summary">
         <h2>Mättat fett i dag</h2>
         <div class="big ${over ? 'bad' : ''}"><b>${fmt(sat)}</b> / ${p.satBudget} g</div>
@@ -787,9 +773,8 @@
         <div class="kpis">
           <div class="${tot.n[5] > p.cholGoal ? 'bad' : ''}"><span>Kolesterol</span><b>${Math.round(tot.n[5])} mg</b><small>mål under ${p.cholGoal} mg</small></div>
           <div class="${tot.n[6] >= p.bgGoal ? 'good' : ''}"><span>Betaglukan</span><b>${fmt(tot.n[6])} g</b><small>mål minst ${p.bgGoal} g</small></div>
-          <div><span>Energi</span><b>${Math.round(tot.n[0])}</b><small>kcal</small></div>
-          <div><span>Protein</span><b>${fmt(tot.n[1], 0)} g</b><small>fett ${fmt(tot.n[2], 0)} g · kolh ${fmt(tot.n[3], 0)} g</small></div>
         </div>
+        <p class="muted small macroline">${Math.round(tot.n[0])} kcal · protein ${fmt(tot.n[1], 0)} g · fett ${fmt(tot.n[2], 0)} g · kolhydrat ${fmt(tot.n[3], 0)} g</p>
       </section>
       ${isEmpty && day !== today() && S.plates[addDays(day, -1)] ? `<button class="btn ghost full" id="copy-prev">Kopiera gårdagens tallrik</button>` : ''}
       ${MEALS.map(mealHtml).join('')}
@@ -800,7 +785,7 @@
         <div class="pres" id="pres"></div>
         <details><summary>Lägg till recept från banken</summary><div class="sugg-chips">${allRecipes().map((r) => `<button class="chip-btn" data-addr="${esc(r.id)}" data-m="__sel">${esc(r.title)}</button>`).join('')}</div></details>
       </section>
-      <p class="muted small">Alla värden är grova uppskattningar per 100 g från vanliga svenska livsmedel och ordinarie priser. Budgeten på ${p.satBudget} g mättat fett motsvarar ca 7 % av energin vid 2 500 kcal. Fettkällor räknas enligt måltidsmallen (t.ex. 15 g olja, 20 g nötter eller 60 g avokado = 1). Ägg räknas som 55 g per styck. Recept räknas som en vuxen mallportion. Det du lägger upp sparas bara i den här webbläsaren – exportera under Mer för att flytta.</p>`;
+      <details class="fold small"><summary>Om värdena</summary><p class="muted small">Alla värden är grova uppskattningar per 100 g från vanliga svenska livsmedel och ordinarie priser. Budgeten på ${p.satBudget} g mättat fett motsvarar ca 7 % av energin vid 2 500 kcal. Fettkällor räknas enligt måltidsmallen (t.ex. 15 g olja, 20 g nötter eller 60 g avokado = 1). Ägg räknas som 55 g per styck. Recept räknas som en vuxen mallportion. Det du lägger upp sparas bara i den här webbläsaren – exportera under Mer för att flytta.</p></details>`;
 
     const rer = () => { const y = window.scrollY; viewPlate(_, q); window.scrollTo(0, y); };
     $$('[data-addr]', app()).forEach((b) => b.onclick = () => { const m = b.dataset.m === '__sel' ? PL_MEAL : b.dataset.m; pl[m].push({ r: b.dataset.addr, f: 1 }); save(); rer(); });
@@ -857,10 +842,9 @@
       <section class="card">
         <h2>Hushåll – standardskalning</h2>
         <div class="scaler">
-          <label>Vuxna till middag ${stepper('adults', p.hh.adults)}</label>
+          <label>Vuxna till middag <span class="muted small">(inkl. Ebba/Theo när de äter med)</span> ${stepper('adults', p.hh.adults)}</label>
           <label>Matlådor ${stepper('boxes', p.hh.boxes)}</label>
           <label>Viggo ${stepper('kids', p.hh.kids)}</label>
-          <label>Ebba/Theo ${stepper('big', p.hh.big)}</label>
         </div>
         <p class="muted small">${hhText(p.hh)}</p>
       </section>
@@ -962,16 +946,16 @@
 
 {"title":"…","why":"en rad om varför den passar i kväll","active":20,"total":30,"tags":["fisk"],"lyx":false,
  "lines":[{"id":"sej","g":125,"role":"protein"},{"id":"olivolja","g":30,"role":"fat","note":"stekning"},{"id":"broccoli","g":130,"role":"main"},{"id":"citron","g":10,"role":"side","raw":true},{"id":"morot","g":100,"role":"carb"},{"id":"salt","g":1,"role":"other"}],
- "kid":{"id":"potatis","child":120,"big":250,"how":"hur det lagas parallellt"},
+ "kid":{"id":"potatis","child":120,"how":"hur det lagas parallellt"},
  "steps":[{"t":"steg","wait":"dötid – vad jag hinner göra (valfritt)"}],
- "temp":"kärntemp","box":"matlåda: håller/värms/packas separat","boxOk":true,"upgrade":"vardagslyx-växeln","double":"laga dubbelt?","mageSwap":"bytesförslag om kål/lök/baljväxter","dairyAlt":"mejerifritt alternativ"}
+ "temp":"kärntemp","box":"matlåda: håller/värms/packas separat","boxOk":true,"upgrade":"vardagslyx-växeln","double":"laga dubbelt?","mageSwap":"ett alternativ/byte (valfritt)","dairyAlt":"mejerifritt alternativ"}
 
 Regler:
 - "g" = gram per EN vuxen mallportion. Appen skalar själv till hushållet (${hhText(p.hh)}).
 - role: protein | fat | main | side | carb | other. Allt tillagnings- och tillbehörsfett ska vara role "fat".
 - Protein: en grupp. Fett: G1=1×, G2=2×, G3=2,5×, G4=1×. Huvudgrönsak 100–150 g (1–2 st). Kolhydrat frivillig, EN (inte ris/pasta/bröd för vuxna – de är barntillbehör i "kid").
 - Använd id från listan nedan. Saknas något: {"name":"…","g":…,"role":"…","n":[kcal,protein,fett,kolh,mättat,kolesterol_mg,betaglukan],"p":pris_kr_per_kg}.
-- Undvik: ${p.avoid.join(', ') || '–'}. Allergier: ${p.allergies.join(', ') || '–'}. Gillar: ${p.likes.join(', ') || '–'}. Viggo gillar: ${p.viggo.join(', ') || '–'}. Utrustning: ${p.equipment.join(', ') || '–'}.
+- Undvik: ${p.avoid.join(', ') || '–'}. Allergier: ${p.allergies.join(', ') || '–'}. Gillar: ${p.likes.join(', ') || '–'}. Viggo (3 år) gillar: ${p.viggo.join(', ') || '–'}. Utrustning: ${p.equipment.join(', ') || '–'}.
 - Mallen och naturliga råvaror gäller (inga lightprodukter, inget processat, inga sötningsmedel). Undantag: fettet. Jag har förhöjt LDL och följer vårdens råd om fett${p.ldl ? ` – max ${p.satDinner} g mättat fett per middagsportion` : ''}, ${p.satBudget} g/dag, kolesterol under ${p.cholGoal} mg.
 - Fettkällor i första hand olivolja, kallpressad rapsolja, nötter, frön, avokado. Ost/mejerifett max 1 × per dag. Smör, grädde, kokos, ghee bara som smaksättning (≤ 5 g). Fett kött/chark max 1 gång/vecka, fisk 2–3 gånger/vecka.
 

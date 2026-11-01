@@ -260,3 +260,39 @@ ul.shop li.done span { text-decoration: line-through; opacity: .5; }
   ul.shop li.done span { opacity: .4; }
   #toast { background: var(--brand); color: #062016; font-weight: 600; }
 }
+
+/* ===== Strömlinjeformat: hopfällt och kompakt ===== */
+.ing-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.ing-head h2 { margin: 0; }
+details.portions { margin: 0; text-align: right; }
+details.portions > summary { list-style: none; font-size: .88rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: var(--brand-2); color: var(--brand); }
+details.portions > summary::-webkit-details-marker { display: none; }
+details.portions > summary::after { content: ' ▾'; }
+details.portions[open] > summary::after { content: ' ▴'; }
+details.portions .scaler { justify-content: flex-end; margin-top: 8px; }
+.linkbtn { background: none; border: 0; color: var(--brand); font: inherit; font-size: .85rem; cursor: pointer; padding: 4px 0; text-decoration: underline; }
+table.ing td.num { color: var(--ink); font-weight: 500; }
+table.ing td.num .muted { font-weight: 400; font-size: .82rem; margin-left: 4px; }
+.kidline { margin-top: 12px; padding: 8px 12px; border-radius: 10px; background: var(--brand-2); font-size: .93rem; }
+.alt { font-size: .9rem; margin-top: 10px; color: var(--muted); }
+.alt b { color: var(--ink); }
+details.fold { margin-top: 10px; }
+details.fold > summary { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+details.card.fold { padding: 12px 14px; }
+details.card.fold > summary { color: var(--ink); }
+details.card.fold[open] > summary { margin-bottom: 10px; }
+ul.fatlist { padding-left: 4px; list-style: none; margin: 8px 0; font-size: .92rem; }
+ul.fatlist li { padding: 3px 0; }
+.tips p { margin: 4px 0; font-size: .95rem; }
+.plan-sel { flex: 1; min-height: 40px; border-radius: 999px; font-weight: 600; }
+.actions .btn.primary { flex: 1; }
+details.morefilt { width: 100%; }
+details.morefilt > summary { font-size: .9rem; }
+details.morefilt .filters { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+.macroline { margin: 10px 0 0; text-align: center; }
+details.fold.small { font-size: .86rem; }
+@media (prefers-color-scheme: dark) {
+  .kidline { background: rgba(124,196,255,.10); border: 1px solid rgba(124,196,255,.2); }
+  details.portions > summary { background: #1c3a2d; }
+  details.card.fold { background: var(--card); }
+}

@@ -23,47 +23,47 @@
   const ing = (id, name, cat, n, p, o = {}) => L.push(Object.assign({ id, name, cat, n, p }, o));
 
   /* ---------- PROTEIN grupp 1 – fetare ---------- */
-  ing('blandfars', 'Blandfärs', 'protein', [230, 18, 17, 0, 7, 70, 0], 99, { fetkott: true, g: 1, pg: 125, eco: 150, a: A.kott, ecoTip: 'Svensk räcker långt – eko är ett plus men inte nödvändigt.' });
-  ing('flaskfars', 'Fläskfärs', 'protein', [220, 17, 17, 0, 6.5, 70, 0], 85, { fetkott: true, g: 1, pg: 125, eco: 140, a: A.kott });
+  ing('blandfars', 'Blandfärs', 'protein', [230, 18, 17, 0, 7, 70, 0], 99, { pcs: 500, pcsN: 'paket', fetkott: true, g: 1, pg: 125, eco: 150, a: A.kott, ecoTip: 'Svensk räcker långt – eko är ett plus men inte nödvändigt.' });
+  ing('flaskfars', 'Fläskfärs', 'protein', [220, 17, 17, 0, 6.5, 70, 0], 85, { pcs: 500, pcsN: 'paket', fetkott: true, g: 1, pg: 125, eco: 140, a: A.kott });
   ing('flaskkarre', 'Fläskkarré', 'protein', [200, 19, 14, 0, 5, 70, 0], 99, { g: 1, pg: 125, eco: 170, a: A.kott });
-  ing('korv', 'Korv, hög kötthalt utan socker', 'protein', [250, 15, 21, 1, 8, 60, 0], 120, { fetkott: true, g: 1, pg: 125, eco: 170, a: A.kott, ecoTip: 'Läs ingredienslistan – kötthalt ≥ 85 % och inget socker viktigare än eko.' });
-  ing('roktmakrill', 'Rökt makrill', 'protein', [220, 19, 16, 0, 3.5, 70, 0], 180, { fisk: true, g: 1, pg: 125, a: A.kott });
-  ing('lax', 'Lax, odlad filé (fryst)', 'protein', [200, 20, 13, 0, 2.5, 55, 0], 199, { fisk: true, g: 1, pg: 125, eco: 299, a: A.frys, ecoTip: 'ASC räcker oftast. KRAV-lax kostar ~50 % mer.' });
-  ing('oring', 'Öring/fjällröding', 'protein', [160, 20, 8, 0, 2, 55, 0], 230, { fisk: true, g: 1, pg: 125, a: A.kott });
-  ing('kycklinglar', 'Kycklinglårfilé', 'protein', [170, 18, 11, 0, 3, 95, 0], 110, { g: 1, pg: 150, eco: 220, a: A.kott, ecoTip: 'Kyckling är där eko/KRAV gör störst skillnad för djuren – men dubbla priset.' });
-  ing('kycklingklubba', 'Kycklingklubbor', 'protein', [180, 18, 12, 0, 3.3, 95, 0], 60, { g: 1, pg: 150, eco: 120, a: A.kott, ecoTip: 'Billigaste kycklingen – vikten inkl. ben, räkna 150 g per portion.' });
+  ing('korv', 'Korv, hög kötthalt utan socker', 'protein', [250, 15, 21, 1, 8, 60, 0], 120, { pcs: 400, pcsN: 'paket', fetkott: true, g: 1, pg: 125, eco: 170, a: A.kott, ecoTip: 'Läs ingredienslistan – kötthalt ≥ 85 % och inget socker viktigare än eko.' });
+  ing('roktmakrill', 'Rökt makrill', 'protein', [220, 19, 16, 0, 3.5, 70, 0], 180, { pcs: 250, pcsN: 'paket', fisk: true, g: 1, pg: 125, a: A.kott });
+  ing('lax', 'Lax, odlad filé (fryst)', 'protein', [200, 20, 13, 0, 2.5, 55, 0], 199, { pcs: 125, pcsN: 'filé', fisk: true, g: 1, pg: 125, eco: 299, a: A.frys, ecoTip: 'ASC räcker oftast. KRAV-lax kostar ~50 % mer.' });
+  ing('oring', 'Öring/fjällröding', 'protein', [160, 20, 8, 0, 2, 55, 0], 230, { pcs: 250, pcsN: 'filé', fisk: true, g: 1, pg: 125, a: A.kott });
+  ing('kycklinglar', 'Kycklinglårfilé', 'protein', [170, 18, 11, 0, 3, 95, 0], 110, { pcs: 90, pcsN: 'filé', g: 1, pg: 150, eco: 220, a: A.kott, ecoTip: 'Kyckling är där eko/KRAV gör störst skillnad för djuren – men dubbla priset.' });
+  ing('kycklingklubba', 'Kycklingklubbor', 'protein', [180, 18, 12, 0, 3.3, 95, 0], 60, { pcs: 110, pcsN: 'st', g: 1, pg: 150, eco: 120, a: A.kott, ecoTip: 'Billigaste kycklingen – vikten inkl. ben, räkna 150 g per portion.' });
   ing('agg', 'Ägg', 'protein', [140, 12.5, 10, 0.5, 2.8, 370, 0], 73, { g: 1, pg: 165, g4: 110, pcs: 55, pcsN: 'st', eco: 110, a: A.mejeri, ecoTip: 'Eko-ägg ~2 kr mer/st – billig uppgradering, värd det.' });
-  ing('bacon', 'Bacon', 'protein', [300, 14, 27, 0, 10, 70, 0], 150, { fetkott: true, g: 1, pg: 90, a: A.kott });
+  ing('bacon', 'Bacon', 'protein', [300, 14, 27, 0, 10, 70, 0], 150, { pcs: 140, pcsN: 'paket', fetkott: true, g: 1, pg: 90, a: A.kott });
 
   /* ---------- PROTEIN grupp 2 – medel ---------- */
-  ing('notfars', 'Nötfärs 12 %', 'protein', [190, 19, 12, 0, 5, 65, 0], 115, { g: 2, pg: 125, eco: 170, a: A.kott, ecoTip: 'Svensk nötfärs är redan bra. Gräsbete/eko om budgeten tillåter.' });
-  ing('kycklingfars', 'Kycklingfärs', 'protein', [150, 18, 8, 0, 2.5, 80, 0], 105, { g: 2, pg: 125, a: A.kott });
-  ing('kalkonfars', 'Kalkonfärs', 'protein', [140, 19, 7, 0, 2.2, 70, 0], 110, { g: 2, pg: 125, a: A.kott });
-  ing('lammfars', 'Lammfärs', 'protein', [230, 17, 18, 0, 8, 75, 0], 160, { fetkott: true, g: 2, pg: 125, a: A.kott });
-  ing('flaskfile', 'Fläskfilé', 'protein', [110, 21, 3, 0, 1, 60, 0], 130, { g: 2, pg: 125, eco: 230, a: A.kott });
-  ing('flaskkotlett', 'Fläskkotlett', 'protein', [180, 20, 11, 0, 4, 65, 0], 89, { g: 2, pg: 125, eco: 160, a: A.kott });
+  ing('notfars', 'Nötfärs 12 %', 'protein', [190, 19, 12, 0, 5, 65, 0], 115, { pcs: 500, pcsN: 'paket', g: 2, pg: 125, eco: 170, a: A.kott, ecoTip: 'Svensk nötfärs är redan bra. Gräsbete/eko om budgeten tillåter.' });
+  ing('kycklingfars', 'Kycklingfärs', 'protein', [150, 18, 8, 0, 2.5, 80, 0], 105, { pcs: 500, pcsN: 'paket', g: 2, pg: 125, a: A.kott });
+  ing('kalkonfars', 'Kalkonfärs', 'protein', [140, 19, 7, 0, 2.2, 70, 0], 110, { pcs: 500, pcsN: 'paket', g: 2, pg: 125, a: A.kott });
+  ing('lammfars', 'Lammfärs', 'protein', [230, 17, 18, 0, 8, 75, 0], 160, { pcs: 400, pcsN: 'paket', fetkott: true, g: 2, pg: 125, a: A.kott });
+  ing('flaskfile', 'Fläskfilé', 'protein', [110, 21, 3, 0, 1, 60, 0], 130, { pcs: 450, pcsN: 'st', g: 2, pg: 125, eco: 230, a: A.kott });
+  ing('flaskkotlett', 'Fläskkotlett', 'protein', [180, 20, 11, 0, 4, 65, 0], 89, { pcs: 140, pcsN: 'st', g: 2, pg: 125, eco: 160, a: A.kott });
   ing('hogrev', 'Högrev', 'protein', [200, 19, 14, 0, 6, 65, 0], 170, { fetkott: true, g: 2, pg: 125, a: A.kott });
   ing('entrecote', 'Entrecôte', 'protein', [230, 20, 17, 0, 7.5, 70, 0], 349, { fetkott: true, g: 2, pg: 125, a: A.kott });
-  ing('makrilltomat', 'Makrill i tomatsås (burk)', 'protein', [190, 13, 13, 5, 3, 60, 0], 120, { fisk: true, g: 2, pg: 125, a: A.skafferi });
-  ing('sardiner', 'Sardiner i olivolja (avrunna)', 'protein', [210, 24, 12, 0, 2.5, 100, 0], 160, { fisk: true, g: 2, pg: 125, a: A.skafferi });
+  ing('makrilltomat', 'Makrill i tomatsås (burk)', 'protein', [190, 13, 13, 5, 3, 60, 0], 120, { pcs: 125, pcsN: 'burk', fisk: true, g: 2, pg: 125, a: A.skafferi });
+  ing('sardiner', 'Sardiner i olivolja (avrunna)', 'protein', [210, 24, 12, 0, 2.5, 100, 0], 160, { pcs: 90, pcsN: 'burk', fisk: true, g: 2, pg: 125, a: A.skafferi });
 
   /* ---------- PROTEIN grupp 3 – magert ---------- */
-  ing('kycklingfile', 'Kycklingfilé', 'protein', [110, 23, 1.5, 0, 0.5, 60, 0], 120, { g: 3, pg: 125, eco: 260, a: A.kott, ecoTip: 'Eko-filé kostar dubbelt. Svensk konventionell är rimlig kompromiss.' });
-  ing('kalkonfile', 'Kalkonfilé', 'protein', [105, 23, 1, 0, 0.4, 55, 0], 150, { g: 3, pg: 125, a: A.kott });
+  ing('kycklingfile', 'Kycklingfilé', 'protein', [110, 23, 1.5, 0, 0.5, 60, 0], 120, { pcs: 140, pcsN: 'filé', g: 3, pg: 125, eco: 260, a: A.kott, ecoTip: 'Eko-filé kostar dubbelt. Svensk konventionell är rimlig kompromiss.' });
+  ing('kalkonfile', 'Kalkonfilé', 'protein', [105, 23, 1, 0, 0.4, 55, 0], 150, { pcs: 500, pcsN: 'st', g: 3, pg: 125, a: A.kott });
   ing('innanlar', 'Nötinnanlår', 'protein', [120, 22, 3.5, 0, 1.5, 60, 0], 240, { g: 3, pg: 125, a: A.kott });
-  ing('algfars', 'Älgfärs', 'protein', [120, 22, 3, 0, 1.2, 60, 0], 260, { g: 3, pg: 125, a: A.frys });
-  ing('torsk', 'Torskfilé (fryst, MSC)', 'protein', [75, 17, 0.7, 0, 0.1, 45, 0], 149, { fisk: true, g: 3, pg: 125, a: A.frys });
-  ing('sej', 'Sejfilé (fryst, MSC)', 'protein', [80, 18, 0.8, 0, 0.15, 55, 0], 109, { fisk: true, g: 3, pg: 125, a: A.frys, ecoTip: 'Sej är vardagens billigaste vita fisk – MSC-märkt finns nästan alltid.' });
-  ing('tonfisk', 'Tonfisk i vatten (avrunnen)', 'protein', [110, 25, 1, 0, 0.3, 45, 0], 150, { fisk: true, g: 3, pg: 125, a: A.skafferi });
-  ing('rakor', 'Räkor, skalade (frysta)', 'protein', [90, 20, 1, 0, 0.2, 170, 0], 210, { fisk: true, g: 3, pg: 150, a: A.frys });
+  ing('algfars', 'Älgfärs', 'protein', [120, 22, 3, 0, 1.2, 60, 0], 260, { pcs: 500, pcsN: 'paket', g: 3, pg: 125, a: A.frys });
+  ing('torsk', 'Torskfilé (fryst, MSC)', 'protein', [75, 17, 0.7, 0, 0.1, 45, 0], 149, { pcs: 125, pcsN: 'bit', fisk: true, g: 3, pg: 125, a: A.frys });
+  ing('sej', 'Sejfilé (fryst, MSC)', 'protein', [80, 18, 0.8, 0, 0.15, 55, 0], 109, { pcs: 125, pcsN: 'bit', fisk: true, g: 3, pg: 125, a: A.frys, ecoTip: 'Sej är vardagens billigaste vita fisk – MSC-märkt finns nästan alltid.' });
+  ing('tonfisk', 'Tonfisk i vatten (avrunnen)', 'protein', [110, 25, 1, 0, 0.3, 45, 0], 150, { pcs: 120, pcsN: 'burk', fisk: true, g: 3, pg: 125, a: A.skafferi });
+  ing('rakor', 'Räkor, skalade (frysta)', 'protein', [90, 20, 1, 0, 0.2, 170, 0], 210, { pcs: 500, pcsN: 'påse', fisk: true, g: 3, pg: 150, a: A.frys });
 
   /* ---------- PROTEIN grupp 4 – vegetariskt ---------- */
-  ing('kikartor', 'Kikärtor, kokta (burk, avrunna)', 'protein', [140, 8, 2.5, 18, 0.3, 0, 0], 42, { g: 4, pg: 100, mage: true, a: A.skafferi });
-  ing('svartabonor', 'Svarta bönor, kokta (avrunna)', 'protein', [130, 8, 0.5, 17, 0.1, 0, 0], 42, { g: 4, pg: 100, mage: true, a: A.skafferi });
+  ing('kikartor', 'Kikärtor, kokta (burk, avrunna)', 'protein', [140, 8, 2.5, 18, 0.3, 0, 0], 42, { pcs: 230, pcsN: 'burk', g: 4, pg: 100, mage: true, a: A.skafferi });
+  ing('svartabonor', 'Svarta bönor, kokta (avrunna)', 'protein', [130, 8, 0.5, 17, 0.1, 0, 0], 42, { pcs: 230, pcsN: 'burk', g: 4, pg: 100, mage: true, a: A.skafferi });
   ing('linser', 'Röda linser, torra', 'protein', [340, 24, 1.5, 48, 0.2, 0, 0.1], 40, { g: 4, pg: 25, mage: true, a: A.skafferi });
-  ing('fetaost', 'Fetaost/fårost', 'protein', [260, 14, 21, 1, 14, 70, 0], 120, { g4: 50, fu: 25, dairy: true, a: A.mejeri });
-  ing('halloumi', 'Halloumi/grillost', 'protein', [320, 22, 25, 2, 16, 80, 0], 160, { g4: 50, fu: 25, dairy: true, a: A.mejeri });
-  ing('mozzarella', 'Mozzarella', 'protein', [250, 18, 19, 1, 12, 60, 0], 110, { g4: 50, fu: 25, dairy: true, a: A.mejeri });
+  ing('fetaost', 'Fetaost/fårost', 'protein', [260, 14, 21, 1, 14, 70, 0], 120, { pcs: 150, pcsN: 'paket', g4: 50, fu: 25, dairy: true, a: A.mejeri });
+  ing('halloumi', 'Halloumi/grillost', 'protein', [320, 22, 25, 2, 16, 80, 0], 160, { pcs: 200, pcsN: 'paket', g4: 50, fu: 25, dairy: true, a: A.mejeri });
+  ing('mozzarella', 'Mozzarella', 'protein', [250, 18, 19, 1, 12, 60, 0], 110, { pcs: 125, pcsN: 'st', g4: 50, fu: 25, dairy: true, a: A.mejeri });
   ing('parmesan', 'Parmesan', 'fat', [390, 35, 27, 0, 17, 90, 0], 260, { g4: 35, fu: 25, dairy: true, a: A.mejeri });
 
   /* ---------- FETT ---------- */
@@ -89,71 +89,71 @@
   ing('farskost', 'Färskost', 'fat', [250, 6, 24, 3, 16, 70, 0], 100, { fu: 25, msk: 15, dairy: true, a: A.mejeri });
   ing('hardost', 'Hårdost 28 % (präst/herrgård)', 'fat', [350, 27, 28, 0, 18, 85, 0], 110, { fu: 25, g4: 50, dairy: true, a: A.mejeri });
   ing('cheddar', 'Cheddar', 'fat', [400, 25, 33, 0, 21, 100, 0], 150, { fu: 25, dairy: true, a: A.mejeri });
-  ing('kokosmjolk', 'Kokosmjölk', 'fat', [190, 1.8, 19, 3, 17, 0, 0], 45, { fu: 50, msk: 15, a: A.skafferi });
+  ing('kokosmjolk', 'Kokosmjölk', 'fat', [190, 1.8, 19, 3, 17, 0, 0], 45, { pcs: 400, pcsN: 'burk', fu: 50, msk: 15, a: A.skafferi });
   ing('turkyog', 'Turkisk yoghurt 10 %', 'fat', [120, 4, 10, 4, 6.5, 30, 0], 45, { fu: 50, msk: 15, dairy: true, a: A.mejeri });
   ing('avokado', 'Avokado', 'fat', [160, 2, 15, 2, 2.1, 0, 0], 75, { fu: 60, pcs: 140, pcsN: 'st', a: A.gront });
 
   /* ---------- HUVUDGRÖNSAKER ---------- */
   ing('broccoli', 'Broccoli', 'veg', [34, 3, 0.4, 4, 0.1, 0, 0], 40, { veg: 'main', mage: true, pcs: 400, pcsN: 'huvud', eco: 70, a: A.gront, ecoTip: 'Sällan värt eko-priset.' });
-  ing('broccolifryst', 'Broccoli, fryst', 'veg', [30, 3, 0.4, 3.5, 0.1, 0, 0], 32, { veg: 'main', mage: true, a: A.frys });
+  ing('broccolifryst', 'Broccoli, fryst', 'veg', [30, 3, 0.4, 3.5, 0.1, 0, 0], 32, { pcs: 500, pcsN: 'påse', veg: 'main', mage: true, a: A.frys });
   ing('blomkal', 'Blomkål', 'veg', [25, 2, 0.3, 3, 0.1, 0, 0], 35, { veg: 'main', mage: true, pcs: 700, pcsN: 'huvud', a: A.gront });
-  ing('haricots', 'Haricots verts (frysta)', 'veg', [30, 2, 0.2, 4, 0.05, 0, 0], 45, { veg: 'main', a: A.frys });
-  ing('vaxbonor', 'Vaxbönor (frysta)', 'veg', [30, 2, 0.2, 4, 0.05, 0, 0], 45, { veg: 'main', a: A.frys });
+  ing('haricots', 'Haricots verts (frysta)', 'veg', [30, 2, 0.2, 4, 0.05, 0, 0], 45, { pcs: 500, pcsN: 'påse', veg: 'main', a: A.frys });
+  ing('vaxbonor', 'Vaxbönor (frysta)', 'veg', [30, 2, 0.2, 4, 0.05, 0, 0], 45, { pcs: 500, pcsN: 'påse', veg: 'main', a: A.frys });
   ing('paprika', 'Paprika', 'veg', [30, 1, 0.3, 5, 0.05, 0, 0], 50, { veg: 'main', pcs: 160, pcsN: 'st', a: A.gront });
   ing('zucchini', 'Zucchini', 'veg', [17, 1.2, 0.3, 2, 0.1, 0, 0], 30, { veg: 'main', pcs: 300, pcsN: 'st', a: A.gront });
   ing('spetskal', 'Spetskål', 'veg', [25, 1.3, 0.2, 4, 0.05, 0, 0], 25, { veg: 'main', mage: true, pcs: 800, pcsN: 'huvud', a: A.gront });
-  ing('vitkal', 'Vitkål', 'veg', [25, 1.3, 0.1, 4, 0.05, 0, 0], 15, { veg: 'main', mage: true, a: A.gront });
-  ing('rodkal', 'Rödkål', 'veg', [29, 1.4, 0.2, 5, 0.05, 0, 0], 20, { veg: 'main', mage: true, a: A.gront });
-  ing('brysselkal', 'Brysselkål', 'veg', [43, 3.4, 0.3, 5, 0.1, 0, 0], 50, { veg: 'main', mage: true, a: A.gront });
-  ing('gronkal', 'Grönkål', 'veg', [50, 4, 0.9, 5, 0.1, 0, 0], 60, { veg: 'main', mage: true, a: A.gront });
+  ing('vitkal', 'Vitkål', 'veg', [25, 1.3, 0.1, 4, 0.05, 0, 0], 15, { pcs: 1200, pcsN: 'huvud', veg: 'main', mage: true, a: A.gront });
+  ing('rodkal', 'Rödkål', 'veg', [29, 1.4, 0.2, 5, 0.05, 0, 0], 20, { pcs: 1000, pcsN: 'huvud', veg: 'main', mage: true, a: A.gront });
+  ing('brysselkal', 'Brysselkål', 'veg', [43, 3.4, 0.3, 5, 0.1, 0, 0], 50, { pcs: 15, pcsN: 'st', veg: 'main', mage: true, a: A.gront });
+  ing('gronkal', 'Grönkål', 'veg', [50, 4, 0.9, 5, 0.1, 0, 0], 60, { pcs: 200, pcsN: 'påse', veg: 'main', mage: true, a: A.gront });
   ing('fankal', 'Fänkål', 'veg', [31, 1.2, 0.2, 4, 0.05, 0, 0], 50, { veg: 'main', pcs: 300, pcsN: 'st', a: A.gront });
-  ing('sparris', 'Sparris, grön', 'veg', [20, 2.2, 0.1, 2, 0.05, 0, 0], 120, { veg: 'main', a: A.gront });
-  ing('pakchoi', 'Pak choi', 'veg', [13, 1.5, 0.2, 1.2, 0.05, 0, 0], 70, { veg: 'main', a: A.gront });
+  ing('sparris', 'Sparris, grön', 'veg', [20, 2.2, 0.1, 2, 0.05, 0, 0], 120, { pcs: 250, pcsN: 'knippe', veg: 'main', a: A.gront });
+  ing('pakchoi', 'Pak choi', 'veg', [13, 1.5, 0.2, 1.2, 0.05, 0, 0], 70, { pcs: 150, pcsN: 'st', veg: 'main', a: A.gront });
   ing('aubergine', 'Aubergine', 'veg', [24, 1, 0.2, 4, 0.05, 0, 0], 40, { veg: 'main', a: A.gront });
 
   /* ---------- SIDOGRÖNSAKER ---------- */
-  ing('spenat', 'Bladspenat, färsk', 'veg', [23, 2.9, 0.4, 1.1, 0.1, 0, 0], 80, { veg: 'side', a: A.gront });
-  ing('ruccola', 'Ruccola', 'veg', [25, 2.6, 0.7, 2, 0.1, 0, 0], 150, { veg: 'side', a: A.gront });
-  ing('romansallad', 'Romansallad/hjärtsallad', 'veg', [15, 1.2, 0.3, 2, 0.05, 0, 0], 50, { veg: 'side', a: A.gront });
+  ing('spenat', 'Bladspenat, färsk', 'veg', [23, 2.9, 0.4, 1.1, 0.1, 0, 0], 80, { pcs: 65, pcsN: 'påse', veg: 'side', a: A.gront });
+  ing('ruccola', 'Ruccola', 'veg', [25, 2.6, 0.7, 2, 0.1, 0, 0], 150, { pcs: 65, pcsN: 'påse', veg: 'side', a: A.gront });
+  ing('romansallad', 'Romansallad/hjärtsallad', 'veg', [15, 1.2, 0.3, 2, 0.05, 0, 0], 50, { pcs: 300, pcsN: 'huvud', veg: 'side', a: A.gront });
   ing('gurka', 'Gurka', 'veg', [12, 0.6, 0.1, 2, 0.02, 0, 0], 25, { veg: 'side', pcs: 350, pcsN: 'st', a: A.gront });
   ing('tomat', 'Tomat', 'veg', [18, 0.9, 0.2, 3, 0.03, 0, 0], 35, { veg: 'side', pcs: 100, pcsN: 'st', a: A.gront });
-  ing('korsbarstomat', 'Körsbärstomater', 'veg', [20, 0.9, 0.2, 3.5, 0.03, 0, 0], 60, { veg: 'side', a: A.gront });
-  ing('krossadetomater', 'Krossade tomater (burk)', 'veg', [25, 1.2, 0.2, 4, 0.03, 0, 0], 25, { veg: 'side', a: A.skafferi });
+  ing('korsbarstomat', 'Körsbärstomater', 'veg', [20, 0.9, 0.2, 3.5, 0.03, 0, 0], 60, { pcs: 250, pcsN: 'ask', veg: 'side', a: A.gront });
+  ing('krossadetomater', 'Krossade tomater (burk)', 'veg', [25, 1.2, 0.2, 4, 0.03, 0, 0], 25, { pcs: 400, pcsN: 'burk', veg: 'side', a: A.skafferi });
   ing('gullok', 'Gul lök', 'veg', [40, 1.1, 0.1, 8, 0.02, 0, 0], 15, { veg: 'side', mage: true, pcs: 100, pcsN: 'st', a: A.gront });
   ing('rodlok', 'Rödlök', 'veg', [40, 1.1, 0.1, 8, 0.02, 0, 0], 20, { veg: 'side', mage: true, pcs: 100, pcsN: 'st', a: A.gront });
   ing('purjo', 'Purjolök', 'veg', [31, 1.5, 0.3, 5, 0.04, 0, 0], 35, { veg: 'side', mage: true, pcs: 300, pcsN: 'st', a: A.gront });
   ing('salladslok', 'Salladslök', 'veg', [32, 1.8, 0.2, 5, 0.03, 0, 0], 80, { veg: 'side', mage: true, pcs: 15, pcsN: 'st', a: A.gront });
   ing('vitlok', 'Vitlök', 'veg', [150, 6, 0.5, 30, 0.1, 0, 0], 80, { veg: 'side', mage: true, pcs: 5, pcsN: 'klyfta', a: A.gront });
-  ing('champinjoner', 'Champinjoner', 'veg', [22, 3, 0.3, 0.5, 0.05, 0, 0], 50, { veg: 'side', a: A.gront });
+  ing('champinjoner', 'Champinjoner', 'veg', [22, 3, 0.3, 0.5, 0.05, 0, 0], 50, { pcs: 250, pcsN: 'ask', veg: 'side', a: A.gront });
   ing('citron', 'Citron', 'veg', [30, 1, 0.3, 6, 0.04, 0, 0], 30, { veg: 'side', pcs: 100, pcsN: 'st', a: A.gront });
   ing('lime', 'Lime', 'veg', [30, 0.7, 0.2, 7, 0.02, 0, 0], 50, { veg: 'side', pcs: 70, pcsN: 'st', a: A.gront });
-  ing('dill', 'Dill', 'veg', [43, 3.5, 1, 4, 0.05, 0, 0], 400, { veg: 'side', a: A.gront });
-  ing('persilja', 'Persilja', 'veg', [36, 3, 0.8, 4, 0.1, 0, 0], 400, { veg: 'side', a: A.gront });
-  ing('koriander', 'Koriander', 'veg', [23, 2, 0.5, 2, 0.01, 0, 0], 400, { veg: 'side', a: A.gront });
-  ing('basilika', 'Basilika', 'veg', [23, 3, 0.6, 1, 0.04, 0, 0], 400, { veg: 'side', a: A.gront });
-  ing('graslok', 'Gräslök', 'veg', [30, 3, 0.7, 2, 0.1, 0, 0], 400, { veg: 'side', a: A.gront });
-  ing('ingefara', 'Ingefära', 'veg', [80, 1.8, 0.8, 15, 0.2, 0, 0], 60, { veg: 'side', a: A.gront });
+  ing('dill', 'Dill', 'veg', [43, 3.5, 1, 4, 0.05, 0, 0], 400, { pcs: 25, pcsN: 'kruka', veg: 'side', a: A.gront });
+  ing('persilja', 'Persilja', 'veg', [36, 3, 0.8, 4, 0.1, 0, 0], 400, { pcs: 25, pcsN: 'kruka', veg: 'side', a: A.gront });
+  ing('koriander', 'Koriander', 'veg', [23, 2, 0.5, 2, 0.01, 0, 0], 400, { pcs: 25, pcsN: 'kruka', veg: 'side', a: A.gront });
+  ing('basilika', 'Basilika', 'veg', [23, 3, 0.6, 1, 0.04, 0, 0], 400, { pcs: 25, pcsN: 'kruka', veg: 'side', a: A.gront });
+  ing('graslok', 'Gräslök', 'veg', [30, 3, 0.7, 2, 0.1, 0, 0], 400, { pcs: 25, pcsN: 'kruka', veg: 'side', a: A.gront });
+  ing('ingefara', 'Ingefära', 'veg', [80, 1.8, 0.8, 15, 0.2, 0, 0], 60, { pcs: 20, pcsN: 'bit', veg: 'side', a: A.gront });
   ing('chili', 'Chili, färsk', 'veg', [40, 1.9, 0.4, 7, 0.04, 0, 0], 120, { veg: 'side', pcs: 10, pcsN: 'st', a: A.gront });
-  ing('radisa', 'Rädisor', 'veg', [16, 0.7, 0.1, 2, 0.01, 0, 0], 60, { veg: 'side', a: A.gront });
+  ing('radisa', 'Rädisor', 'veg', [16, 0.7, 0.1, 2, 0.01, 0, 0], 60, { pcs: 150, pcsN: 'knippe', veg: 'side', a: A.gront });
   ing('surkal', 'Surkål', 'veg', [20, 1, 0.1, 3, 0.02, 0, 0], 60, { veg: 'side', a: A.skafferi });
   ing('oliver', 'Oliver (kalamata)', 'veg', [140, 1, 14, 0, 2, 0, 0], 130, { veg: 'side', a: A.skafferi });
-  ing('selleri', 'Stjälkselleri', 'veg', [16, 0.7, 0.2, 2, 0.04, 0, 0], 40, { veg: 'side', a: A.gront });
-  ing('sockerartor', 'Sockerärtor/sugar snaps', 'veg', [42, 2.8, 0.2, 7, 0.04, 0, 0], 130, { veg: 'side', a: A.gront });
+  ing('selleri', 'Stjälkselleri', 'veg', [16, 0.7, 0.2, 2, 0.04, 0, 0], 40, { pcs: 50, pcsN: 'stjälk', veg: 'side', a: A.gront });
+  ing('sockerartor', 'Sockerärtor/sugar snaps', 'veg', [42, 2.8, 0.2, 7, 0.04, 0, 0], 130, { pcs: 150, pcsN: 'ask', veg: 'side', a: A.gront });
 
   /* ---------- KOLHYDRAT enligt mallen ---------- */
-  ing('morot', 'Morot', 'carb', [41, 0.9, 0.2, 8, 0.03, 0, 0], 15, { carb: 'rot', a: A.gront });
-  ing('palsternacka', 'Palsternacka', 'carb', [75, 1.2, 0.3, 15, 0.05, 0, 0], 35, { carb: 'rot', a: A.gront });
-  ing('rotselleri', 'Rotselleri', 'carb', [42, 1.5, 0.3, 7, 0.05, 0, 0], 30, { carb: 'rot', a: A.gront });
-  ing('rodbeta', 'Rödbeta', 'carb', [43, 1.6, 0.2, 8, 0.03, 0, 0], 20, { carb: 'rot', a: A.gront });
-  ing('kalrot', 'Kålrot', 'carb', [30, 1, 0.2, 6, 0.03, 0, 0], 15, { carb: 'rot', a: A.gront });
-  ing('jordartskocka', 'Jordärtskocka', 'carb', [70, 2, 0.1, 15, 0.01, 0, 0], 80, { carb: 'rot', a: A.gront });
-  ing('pumpa', 'Pumpa (butternut)', 'carb', [45, 1, 0.1, 10, 0.02, 0, 0], 30, { carb: 'rot', a: A.gront });
+  ing('morot', 'Morot', 'carb', [41, 0.9, 0.2, 8, 0.03, 0, 0], 15, { pcs: 80, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('palsternacka', 'Palsternacka', 'carb', [75, 1.2, 0.3, 15, 0.05, 0, 0], 35, { pcs: 150, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('rotselleri', 'Rotselleri', 'carb', [42, 1.5, 0.3, 7, 0.05, 0, 0], 30, { pcs: 700, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('rodbeta', 'Rödbeta', 'carb', [43, 1.6, 0.2, 8, 0.03, 0, 0], 20, { pcs: 120, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('kalrot', 'Kålrot', 'carb', [30, 1, 0.2, 6, 0.03, 0, 0], 15, { pcs: 800, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('jordartskocka', 'Jordärtskocka', 'carb', [70, 2, 0.1, 15, 0.01, 0, 0], 80, { pcs: 40, pcsN: 'st', carb: 'rot', a: A.gront });
+  ing('pumpa', 'Pumpa (butternut)', 'carb', [45, 1, 0.1, 10, 0.02, 0, 0], 30, { pcs: 1000, pcsN: 'st', carb: 'rot', a: A.gront });
   ing('apple', 'Äpple', 'carb', [52, 0.3, 0.2, 12, 0.03, 0, 0], 25, { carb: 'rot', pcs: 150, pcsN: 'st', a: A.gront });
-  ing('blabar', 'Blåbär (frysta)', 'carb', [44, 0.7, 0.3, 9, 0.03, 0, 0], 70, { carb: 'rot', a: A.frys });
-  ing('hallon', 'Hallon (frysta)', 'carb', [42, 1.2, 0.3, 7, 0.02, 0, 0], 80, { carb: 'rot', a: A.frys });
-  ing('sotpotatis', 'Sötpotatis', 'carb', [86, 1.6, 0.1, 18, 0.02, 0, 0], 35, { carb: 'sot', a: A.gront });
+  ing('blabar', 'Blåbär (frysta)', 'carb', [44, 0.7, 0.3, 9, 0.03, 0, 0], 70, { pcs: 250, pcsN: 'påse', carb: 'rot', a: A.frys });
+  ing('hallon', 'Hallon (frysta)', 'carb', [42, 1.2, 0.3, 7, 0.02, 0, 0], 80, { pcs: 250, pcsN: 'påse', carb: 'rot', a: A.frys });
+  ing('sotpotatis', 'Sötpotatis', 'carb', [86, 1.6, 0.1, 18, 0.02, 0, 0], 35, { pcs: 400, pcsN: 'st', carb: 'sot', a: A.gront });
   ing('banan', 'Banan', 'carb', [90, 1.1, 0.3, 20, 0.1, 0, 0], 25, { carb: 'sot', pcs: 120, pcsN: 'st', a: A.gront });
-  ing('potatis', 'Potatis', 'carb', [75, 2, 0.1, 16, 0.02, 0, 0], 15, { carb: 'gra50', kid: true, a: A.gront });
+  ing('potatis', 'Potatis', 'carb', [75, 2, 0.1, 16, 0.02, 0, 0], 15, { pcs: 80, pcsN: 'st', carb: 'gra50', kid: true, a: A.gront });
   ing('havregryn', 'Havregryn', 'carb', [370, 13, 7, 58, 1.2, 0, 4.5], 25, { carb: 'gra20', a: A.skafferi });
   ing('quinoa', 'Quinoa, torr', 'carb', [370, 14, 6, 64, 0.7, 0, 0], 70, { carb: 'gra20', a: A.skafferi });
   ing('bovete', 'Bovete, torr', 'carb', [345, 13, 3.4, 68, 0.7, 0, 0], 60, { carb: 'gra20', a: A.skafferi });

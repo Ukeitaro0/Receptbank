@@ -10,20 +10,18 @@ En webbapp för vardagsmiddagar enligt måltidsmallen (protein + fett + huvudgr�
 | **Förslag** | Föreslår först, sen godkänner du. Du kan filtrera på dag, tid, proteingrupp och *vad du har hemma*. På fredagar är vardagslyx förvalt. |
 | **Recept** | Receptbanken med mallcheck (✓/!), sökning och mallbyggaren för egna recept. |
 | **Tallrik** | Bygg din tallrik: mättat fett mot dagsbudget, kolesterol, betaglukan och fettkällor per måltid. Dagens planerade middag och gårdagens matlåda kan läggas upp med ett tryck. |
-| **Mer** | Hushållsskalning, smakprofil (undvik/allergier/utrustning), mål, egna ingredienser, import från Claude, backup. |
+| **Mer** | Hushållsskalning (Ebba/Theo räknas som vuxna när de äter med), smakprofil (undvik/allergier/utrustning), mål, egna ingredienser, import från Claude, backup. |
 
 ## Receptvyn (enligt projektinstruktionen §4)
 
 Varje recept visar:
 
 - rubrik och "varför i kväll"
-- mallcheck
-- ingredienser skalade efter hushållet, med fettkällorna markerade och redovisade separat
-- tillbehör till Viggo och storbarnen
+- ingredienser skalade efter hushållet, med ungefärligt antal (½ huvud, 1 citron) och fettkällorna markerade
+- tillbehör till Viggo, och ett alternativ/byte när det finns
 - steg med dötid och kärntemp
-- matlåda
-- näring per vuxenportion
-- vardagslyx-växeln
+- matlåda, laga dubbelt och vardagslyx
+- hopfällt: fett i satsen, mallcheck och näring per portion
 
 Mallchecken räknas fram automatiskt ur ingrediensdatabasen. Den kontrollerar:
 
@@ -32,7 +30,6 @@ Mallchecken räknas fram automatiskt ur ingrediensdatabasen. Den kontrollerar:
 - huvudgrönsakens gram
 - kolhydratregler (ris, pasta och bröd bara som barntillbehör)
 - mejeri-gråzon
-- magkänsliga råvaror
 - undvik-listan
 - mättat fett per middag (LDL-läge)
 
