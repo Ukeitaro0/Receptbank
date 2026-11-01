@@ -510,7 +510,7 @@
 
       <section class="card">
         <h2>Gör så här</h2>
-        <ol class="steps">${r.steps.map((s) => `<li>${esc(s.t)}${s.wait ? `<div class="wait">⏳ ${esc(s.wait)}</div>` : ''}</li>`).join('')}</ol>
+        <ol class="steps">${r.steps.map((s) => `<li>${esc(s.t)}${s.smart ? `<div class="bubble smart"><b>⚡ Passa på</b> ${esc(s.smart)}</div>` : ''}${s.wait ? `<div class="bubble wait"><b>⏳ Dötid</b> ${esc(s.wait)}</div>` : ''}</li>`).join('')}</ol>
         ${r.temp ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}
       </section>
 
@@ -564,7 +564,7 @@
     L.push('', `## Ingredienser (${hhText(VHH)})`);
     r.lines.forEach((l) => L.push(`- ${amountText(l.id, l.g * P)} ${ing(l.id).name}${l.role === 'fat' ? ` [fettkälla ${fmt((l.g / (ing(l.id).fu || 15)) * P, 1)} ×]` : ''}${l.note ? ' – ' + l.note : ''}`));
     if (r.kid) L.push('', '## Till Viggo', `- ${ing(r.kid.id).name} ${amountText(r.kid.id, r.kid.child)} – lagas separat. ${r.kid.how}`);
-    L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
+    L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.smart ? ` (⚡ Passa på: ${s.smart})` : ''}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
     if (r.temp) L.push(`Kärntemp: ${r.temp}`);
     L.push('', '## Matlåda', r.box || '–');
     if (r.upgrade) L.push('', `## Vardagslyx-växeln`, r.upgrade);
@@ -640,8 +640,8 @@
       </section>
       <section class="card">
         <h2>Gör så här</h2>
-        <p class="muted small">Ett steg per rad. Dötid skrivs efter <code>||</code>, t.ex. <code>Rosta 20 min || duka och bada Viggo</code>.</p>
-        <textarea id="b-steps" rows="7">${esc(D.steps.map((s) => s.t + (s.wait ? ' || ' + s.wait : '')).join('\n'))}</textarea>
+        <p class="muted small">Ett steg per rad. Dötid efter <code>||</code>, "passa på" efter ett andra <code>||</code>. T.ex. <code>Rosta 20 min || duka || sätt på potatisen</code>.</p>
+        <textarea id="b-steps" rows="7">${esc(D.steps.map((s) => s.t + (s.wait || s.smart ? ' || ' + (s.wait || '') : '') + (s.smart ? ' || ' + s.smart : '')).join('\n'))}</textarea>
         <label class="wide">Kärntemp (stektermometer) <input id="b-temp" value="${esc(D.temp || '')}"></label>
         <label class="wide">Laga dubbelt? <input id="b-double" value="${esc(D.double || '')}"></label>
       </section>
@@ -664,7 +664,7 @@
     bind('#b-active', (e) => (D.active = +e.value || 0)); bind('#b-total', (e) => (D.total = +e.value || 0));
     bind('#b-lyx', (e) => (D.lyx = e.checked)); bind('#b-tags', (e) => (D.tags = e.value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)));
     bind('#k-id', (e) => (D.kid.id = e.value)); bind('#k-child', (e) => (D.kid.child = +e.value || 0)); bind('#k-how', (e) => (D.kid.how = e.value));
-    bind('#b-steps', (e) => (D.steps = e.value.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const [t, w] = x.split('||').map((y) => y.trim()); return w ? { t, wait: w } : { t }; })));
+    bind('#b-steps', (e) => (D.steps = e.value.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const [t, w, m] = x.split('||').map((y) => y.trim()); const o = { t }; if (w) o.wait = w; if (m) o.smart = m; return o; })));
     bind('#b-temp', (e) => (D.temp = e.value)); bind('#b-double', (e) => (D.double = e.value)); bind('#b-box', (e) => (D.box = e.value));
     bind('#b-boxok', (e) => (D.boxOk = e.checked)); bind('#b-upgrade', (e) => (D.upgrade = e.value)); bind('#b-mage', (e) => (D.mageSwap = e.value)); bind('#b-dairy', (e) => (D.dairyAlt = e.value));
 
@@ -842,11 +842,11 @@
       <section class="card">
         <h2>Hushåll – standardskalning</h2>
         <div class="scaler">
-          <label>Vuxna till middag <span class="muted small">(inkl. Ebba/Theo när de äter med)</span> ${stepper('adults', p.hh.adults)}</label>
+          <label>Vuxna ${stepper('adults', p.hh.adults)}</label>
           <label>Matlådor ${stepper('boxes', p.hh.boxes)}</label>
           <label>Viggo ${stepper('kids', p.hh.kids)}</label>
         </div>
-        <p class="muted small">${hhText(p.hh)}</p>
+        <p class="muted small">${hhText(p.hh)}. Ebba/Theo räknas som vuxna när de äter med.</p>
       </section>
       <section class="card">
         <h2>Smakprofil</h2>
@@ -947,7 +947,7 @@
 {"title":"…","why":"en rad om varför den passar i kväll","active":20,"total":30,"tags":["fisk"],"lyx":false,
  "lines":[{"id":"sej","g":125,"role":"protein"},{"id":"olivolja","g":30,"role":"fat","note":"stekning"},{"id":"broccoli","g":130,"role":"main"},{"id":"citron","g":10,"role":"side","raw":true},{"id":"morot","g":100,"role":"carb"},{"id":"salt","g":1,"role":"other"}],
  "kid":{"id":"potatis","child":120,"how":"hur det lagas parallellt"},
- "steps":[{"t":"steg","wait":"dötid – vad jag hinner göra (valfritt)"}],
+ "steps":[{"t":"steg","smart":"passa på – smart parallellt moment, t.ex. sätt på potatisvattnet (valfritt)","wait":"dötid – vad jag hinner göra (valfritt)"}],
  "temp":"kärntemp","box":"matlåda: håller/värms/packas separat","boxOk":true,"upgrade":"vardagslyx-växeln","double":"laga dubbelt?","mageSwap":"ett alternativ/byte (valfritt)","dairyAlt":"mejerifritt alternativ"}
 
 Regler:
@@ -984,7 +984,7 @@ Ingredienser (id=namn): ${ids}`;
         }
         const out = { id, g: +l.g || 0, role }; if (l.note) out.note = String(l.note); if (l.raw) out.raw = true; return out;
       });
-      r.steps = (r.steps || []).map((x) => (typeof x === 'string' ? { t: x } : { t: String(x.t || ''), ...(x.wait ? { wait: String(x.wait) } : {}) }));
+      r.steps = (r.steps || []).map((x) => (typeof x === 'string' ? { t: x } : { t: String(x.t || ''), ...(x.wait ? { wait: String(x.wait) } : {}), ...(x.smart ? { smart: String(x.smart) } : {}) }));
       if (r.kid && !ING[r.kid.id]) delete r.kid;
       r.active = +r.active || 30; r.total = +r.total || r.active; r.tags = Array.isArray(r.tags) ? r.tags : [];
       let base = slug(r.title), x = base, k = 2; while (getRecipe(x)) x = `${base}-${k++}`; r.id = x;

@@ -296,3 +296,24 @@ details.fold.small { font-size: .86rem; }
   details.portions > summary { background: #1c3a2d; }
   details.card.fold { background: var(--card); }
 }
+
+/* Stepper på en rad, steg-bubblor */
+.scaler { display: flex; flex-wrap: nowrap; gap: 10px; justify-content: space-between; }
+.scaler label { flex: 1 1 0; min-width: 0; align-items: center; text-align: center; margin: 0; white-space: nowrap; font-size: .85rem; }
+.scaler .stepper { align-self: center; flex: none; }
+.stepper button { width: 32px; }
+.stepper b { min-width: 22px; }
+details.portions .scaler { justify-content: flex-end; gap: 8px; }
+details.portions .scaler label { flex: 0 1 auto; }
+.bubble { display: block; width: fit-content; max-width: 100%; margin-top: 6px; font-size: .88rem; padding: 6px 11px; border-radius: 12px 12px 12px 4px; line-height: 1.35; }
+.bubble b { font-weight: 700; margin-right: 4px; white-space: nowrap; }
+.bubble.smart { background: #fff1d6; color: #6b4300; border: 1px solid #f3cf86; }
+.bubble.wait { background: var(--brand-2); color: var(--ink); }
+.wait:not(.bubble) { display: none; }
+@media (prefers-color-scheme: dark) {
+  .bubble.smart { background: linear-gradient(135deg, rgba(255,181,71,.22), rgba(255,181,71,.10)); color: #ffe2b0; border-color: rgba(255,181,71,.45); box-shadow: 0 0 14px rgba(255,181,71,.12); }
+  .bubble.smart b { color: #ffc56b; }
+  .bubble.wait { background: rgba(124,196,255,.12); color: #cfe6ff; border: 1px solid rgba(124,196,255,.22); }
+  .bubble.wait b { color: #9fd2ff; }
+}
+details.portions > summary { display: inline-block; cursor: pointer; }

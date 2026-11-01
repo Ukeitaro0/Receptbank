@@ -2,7 +2,7 @@
  * Appen skalar till hushållet (standard 3 vuxna + 2 matlådor + Viggo).
  * role: protein | fat | main | side | carb | other      raw: true = serveras rå
  * kid: kolhydrattillbehör – gram per barnportion (child) och per "vanlig" vuxen/storbarn (big).
- * steps: { t: text, wait: 'dötid – vad du kan göra' }
+ * steps: { t: text, smart: 'passa på – parallellt moment', wait: 'dötid – vad du kan göra' }
  */
 window.SEED_RECIPES = [
   {
@@ -22,10 +22,10 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Koka i saltat vatten ca 20 min medan plåten står i ugnen.' },
     steps: [
-      { t: 'Ugnen på 225°. Sätt potatisvattnet på.' },
+      { t: 'Ugnen på 225°.', smart: 'Sätt på potatisvattnet direkt – då kokar det när plåten går in.' },
       { t: 'Skala och skär palsternackan i stavar, dela broccolin i buketter. Lägg på plåt, ringla över oljan, salta.' },
-      { t: 'In i ugnen 10 min.', wait: '10 min – lägg i potatisen, duka.' },
-      { t: 'Lägg laxen mitt på plåten, citronskivor ovanpå. In igen 12–15 min (fryst lax: 20 min, 175° i stället för 225° de sista 10 min).', wait: '12–15 min – Viggo-tid.' },
+      { t: 'In i ugnen 10 min.', wait: '10 min – lägg i potatisen och duka.' },
+      { t: 'Lägg laxen mitt på plåten, citronskivor ovanpå. In igen 12–15 min (fryst lax: 20 min, sänk till 175° de sista 10).', wait: '12–15 min – Viggo-tid.' },
       { t: 'Toppa med dill och ruccola. Häll av potatisen.' }
     ],
     temp: 'Lax: 52–54° kärntemp (saftig), 56° om du vill ha den helt genomstekt.',
@@ -58,13 +58,11 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'ris', child: 40, big: 90, how: 'Koka jasminriset först (12 min + 5 min vila under lock).' },
     steps: [
-      { t: 'Sätt på riset.' },
-      { t: 'Skär kycklingen i bitar, paprikan i strimlor. Riv ingefära och vitlök.' },
-      { t: 'Rosta cashewnötterna torrt i grytan, häll upp.' },
+      { t: 'Skär kycklingen i bitar, paprikan i strimlor. Riv ingefära och vitlök.', smart: 'Sätt på riset först – det blir klart samtidigt som grytan.' },
+      { t: 'Rosta cashewnötterna torrt i grytan, häll upp.', smart: 'Samma gryta används sen – inget extra att diska.' },
       { t: 'Hetta oljan, fräs currypasta, ingefära och vitlök 1 min. Bryn kycklingen 3–4 min.' },
-      { t: 'Rör ut mandelsmöret i de krossade tomaterna + ca 1 dl vatten per 4 portioner. Häll i med paprika och haricots verts. Sjud under lock 8 min.', wait: '8 min – plocka undan, duka.' },
-      { t: 'Smaka av med fisksås och lime. Toppa med salladslök, koriander och nötter.' },
-      { t: 'Viggo: ta upp hans portion innan chili/fisksås om det behövs.' }
+      { t: 'Rör ut mandelsmöret i de krossade tomaterna + ca 1 dl vatten per 4 portioner. Häll i med paprika och haricots verts. Sjud under lock 8 min.', wait: '8 min – plocka undan och duka.' },
+      { t: 'Ta upp Viggos portion. Smaka av resten med fisksås och lime, toppa med salladslök, koriander och nötter.' }
     ],
     temp: 'Kyckling: 72° kärntemp i den tjockaste biten.',
     box: 'Mycket bra – blir godare dag 2. Håller 3 dagar. Packa nötter och koriander separat.',
@@ -91,10 +89,10 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Kokas i samma kastrull som morötterna – morötterna i de sista 10 min.' },
     steps: [
-      { t: 'Sätt på potatisen. Skiva rödlöken tunt, blanda med vinäger, senap och en nypa salt.' },
+      { t: 'Skiva rödlöken tunt, blanda med vinäger, senap och en nypa salt.', smart: 'Sätt på potatisen först. Löken hinner bli syrlig medan resten görs.' },
       { t: 'Blanda färserna, salta och peppra, forma biffar (ca 60 g styck).' },
-      { t: 'Stek biffarna i hälften av oljan, 3–4 min per sida. Håll varma i ugn 100°.', wait: 'Medan biffarna steks: skär moroten och lägg den i potatisvattnet.' },
-      { t: 'Strimla spetskålen, stek i resten av oljan i samma panna 4–5 min – den ska få färg men ha tugg kvar.' },
+      { t: 'Stek biffarna i hälften av oljan, 3–4 min per sida. Håll varma i ugn 100°.', smart: 'Medan biffarna steks: skär moroten och lägg den i potatisvattnet – samma kastrull.' },
+      { t: 'Strimla spetskålen, stek i resten av oljan 4–5 min – färg men tugg kvar.', smart: 'Samma panna som biffarna – stekskyn ger kålen smak.' },
       { t: 'Servera med senapslöken och persilja.' }
     ],
     temp: 'Färs: 72° kärntemp.',
@@ -122,8 +120,8 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Koka all potatis (även er 50 g) i samma kastrull.' },
     steps: [
-      { t: 'Ugnen på 225°. Dela blomkålen i buketter, blanda med olivolja och salt, rosta 20–25 min.', wait: '20 min – sätt på potatisen, duka.' },
-      { t: 'Lägg torsken i en smord form, salta, in i ugnen de sista 12–15 min (fryst: 20 min).' },
+      { t: 'Ugnen på 225°. Dela blomkålen i buketter, blanda med olivolja och salt, rosta 20–25 min.', smart: 'Sätt på potatisen nu – all potatis i samma kastrull.', wait: '20 min – duka och plocka undan.' },
+      { t: 'Lägg torsken i en smord form, salta, in i ugnen de sista 12–15 min (fryst: 20 min).', wait: '12 min – gör kaprisoljan nedan.' },
       { t: 'Värm oljan i en liten kastrull och rosta mandeln 1 min tills den är gyllene. Av från värmen, pressa i citron, rör ner kapris.' },
       { t: 'Ös oljan över fisk och blomkål, toppa med persilja.' }
     ],
@@ -152,11 +150,11 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Kokas parallellt, ca 20 min.' },
     steps: [
-      { t: 'Ugnen på 200°. Skär rotsellerin i 2 cm tärningar, rosta 25 min med en skvätt av oljan och salt. Sätt på potatisen.', wait: '25 min – resten görs under tiden.' },
-      { t: 'Bryn fläskfilén runt om i olja, 4–5 min. Lägg i ugnen bredvid rotsellerin tills 62°.' },
-      { t: 'Stek champinjoner och hackad lök i samma panna. Häll på 1,5 dl vatten per 4 portioner, buljong, timjan och dijon. Koka ihop 5 min, vispa i resten av oljan på slutet.' },
-      { t: 'Koka/ånga haricots verts 4 min.' },
-      { t: 'Låt köttet vila 5 min, skiva, servera med såsen.' }
+      { t: 'Ugnen på 200°. Skär rotsellerin i 2 cm tärningar, rosta 25 min med en skvätt av oljan och salt.', smart: 'Sätt på potatisen samtidigt.', wait: '25 min – resten görs under tiden.' },
+      { t: 'Bryn fläskfilén runt om i olja, 4–5 min. Lägg i ugnen bredvid rotsellerin tills 62°.', smart: 'Stick in stektermometern nu – sen behöver du inte titta till köttet.' },
+      { t: 'Stek champinjoner och hackad lök i samma panna. Häll på 1,5 dl vatten per 4 portioner, buljong, timjan och dijon. Koka ihop 5 min, vispa i resten av oljan på slutet.', smart: 'Samma panna som köttet – stekytan blir skyns smak.' },
+      { t: 'Ånga haricots verts 4 min.', smart: 'Ånga dem i ett durkslag över potatisen – en platta mindre.' },
+      { t: 'Låt köttet vila 5 min, skiva, servera med skyn.' }
     ],
     temp: 'Fläskfilé: 62–65° kärntemp, vila 5 min.',
     box: 'Bra. Skiva köttet tunt, sås i egen burk. Håller 3 dagar.',
@@ -185,8 +183,8 @@ window.SEED_RECIPES = [
     kid: { id: 'couscous', child: 30, big: 80, how: 'Häll kokande vatten över (1:1), lock på 5 min.' },
     steps: [
       { t: 'Ugnen på 225°. Skär zucchini och paprika i bitar, blanda med kikärtorna, 2/3 av oljan och kryddorna.' },
-      { t: 'Rosta 20 min.', wait: '20 min – hacka tomat, gurka, rödlök, persilja.' },
-      { t: 'Koka äggen 8 min, kyl i kallt vatten. Gör couscousen.' },
+      { t: 'Rosta 20 min.', smart: 'Koka äggen samtidigt, 8 min.', wait: '20 min – hacka tomat, gurka, rödlök och persilja.' },
+      { t: 'Gör couscousen: kokande vatten över (1:1), lock på 5 min.', smart: 'Använd äggvattnet – det kokar redan.' },
       { t: 'Skiva halloumin och stek den torrt i het panna, 1–2 min per sida.' },
       { t: 'Blanda allt, toppa med delade ägg, ringla över resten av oljan och citron.' }
     ],
@@ -213,11 +211,11 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Potatisklyftor på en egen plåt samtidigt (lite olja, salt).' },
     steps: [
-      { t: 'Ugnen på 225°. Skär sötpotatis i tärningar och potatis i klyftor (egen plåt).' },
-      { t: 'Gnid in klubborna med hälften av oljan, salt och kryddorna. Lägg på plåten med sötpotatisen, in i ugnen.' },
+      { t: 'Ugnen på 225°. Skär sötpotatis i tärningar och potatis i klyftor (potatisen på egen plåt).' },
+      { t: 'Gnid in klubborna med hälften av oljan, salt och kryddorna. Lägg på plåten med sötpotatisen, in i ugnen.', smart: 'Potatisplåten in samtidigt – två plåtar, ett ugnspass.' },
       { t: 'Rosta 20 min.', wait: '20 min – skär paprika, zucchini och rödlök grovt.' },
       { t: 'Lägg i grönsakerna med resten av oljan, rosta 20 min till.', wait: '20 min – ledig tid.' },
-      { t: 'Toppa med persilja och chili (chilin vid bordet för Viggo).' }
+      { t: 'Toppa med persilja. Chilin vid bordet för Viggos skull.' }
     ],
     temp: 'Kycklingklubbor: 80–85° vid benet.',
     box: 'Mycket bra. Håller 3 dagar, värms i micro 2 min.',
@@ -245,10 +243,10 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'ris', child: 40, big: 90, how: 'Koka riset först, 12 min + vila.' },
     steps: [
-      { t: 'Sätt på riset. Rosta cashew torrt i pannan, häll upp.' },
-      { t: 'Hetta sesamoljan rejält. Stek färsen smulig och med stekyta, 5 min.' },
+      { t: 'Rosta cashewnötterna torrt i pannan, häll upp.', smart: 'Sätt på riset först – woken går fort.' },
+      { t: 'Hetta sesamoljan rejält. Stek färsen smulig och med stekyta, 5 min.', smart: 'Låt färsen ligga still 1–2 min innan du rör – då får den stekyta.' },
       { t: 'Lägg i vitlök, chili, haricots och paprika, woka 4 min.' },
-      { t: 'Soja, fisksås, lime. Av från värmen, vänd ner basilika och salladslök. Toppa med nötter.' }
+      { t: 'Ta upp Viggos portion. Soja, fisksås och lime i resten. Av från värmen, vänd ner basilika och salladslök, toppa med nötter.' }
     ],
     temp: 'Färs: genomstekt (72°).',
     box: 'Mycket bra. Håller 3 dagar. Nötter separat.',
@@ -274,9 +272,9 @@ window.SEED_RECIPES = [
     kid: { id: 'couscous', child: 30, big: 80, how: 'Kokande vatten över (1:1), lock på 5 min, precis innan servering.' },
     steps: [
       { t: 'Ugnen på 225°. Skär fänkål och morot i klyftor/stavar.' },
-      { t: 'Lägg kyckling, fänkål, morot, citronklyftor och hela vitlöksklyftor på plåt. Olja, salt, timjan.' },
+      { t: 'Lägg kyckling, fänkål, morot, citronklyftor och hela vitlöksklyftor på plåt. Olja, salt, timjan.', smart: 'Lägg en extra plåt lårfilé bredvid – lunchprotein utan extra jobb.' },
       { t: 'Rosta 25 min. Lägg broccolin på plåten de sista 10 min.', wait: '25 min – fri tid.' },
-      { t: 'Gör couscousen. Pressa de rostade citronerna över allt.' }
+      { t: 'Gör couscousen. Pressa de rostade citronerna över allt.', smart: 'Rostad citronsaft + stekskyn är såsen – inget mer behövs.' }
     ],
     temp: 'Kycklinglår: 78–82° (då blir det mört).',
     box: 'Mycket bra. Håller 3 dagar. Funkar kallt.',
@@ -308,10 +306,10 @@ window.SEED_RECIPES = [
     kid: { id: 'hamburgerbrod', child: 60, big: 120, how: 'Värm bröden i ugnen sista 3 min.' },
     steps: [
       { t: 'Ugnen på 225°. Sötpotatis i klyftor med oljan och salt, 25 min.', wait: '25 min – resten görs under tiden.' },
-      { t: 'Coleslaw: strimla spetskålen fint, blanda med majonnäs, en skvätt vinäger och salt.' },
+      { t: 'Coleslaw: strimla spetskålen fint, blanda med majonnäs, en skvätt vinäger och salt.', smart: 'Gör den först – den blir godare av att dra en stund.' },
       { t: 'Blanda färserna, forma burgare (ca 125 g/vuxen, 50 g Viggo). Tryck platta.' },
-      { t: 'Stek zucchiniskivor torrt i het panna, lägg åt sidan. Stek burgarna 3 min/sida.' },
-      { t: 'Bygg: salladsblad som "bröd" för oss, bröd för barnen.' }
+      { t: 'Stek zucchiniskivor torrt i het panna, lägg åt sidan. Stek burgarna 3 min/sida.', smart: 'Bröden in i ugnen de sista 3 min.' },
+      { t: 'Bygg: salladsblad som \'bröd\' för oss, bröd för barnen.' }
     ],
     temp: 'Färsburgare: 72°.',
     box: 'Dålig som matlåda – burgare + sallad blir sladdrigt. Gör i stället: stek 2 extra burgare och lägg dem på en matlådesallad med coleslaw separat.',
@@ -336,8 +334,8 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'pasta', child: 40, big: 100, how: 'Koka pastan (spaghetti) först. Viggo får räkor + pasta med lite av oljan, utan chili.' },
     steps: [
-      { t: 'Tina räkorna i kallt vatten i ett durkslag. Sätt på pastavattnet.' },
-      { t: 'Skär broccoli i små buketter och zucchini i halvmånar. Stek i hälften av oljan 5 min.' },
+      { t: 'Tina räkorna i kallt vatten i ett durkslag.', smart: 'Sätt på pastavattnet direkt – det är det som tar längst tid.' },
+      { t: 'Skär broccoli i små buketter och zucchini i halvmånar. Stek i hälften av oljan 5 min.', smart: 'Pastan i vattnet nu – klar samtidigt som räkorna.' },
       { t: 'Skjut åt sidan, lägg i resten av oljan, skivad vitlök och chili, 30 sek. Lägg i räkorna, 2 min – bara varma.' },
       { t: 'Ringla över resten av oljan, pressa citron, toppa med persilja. Klart.' }
     ],
@@ -365,7 +363,7 @@ window.SEED_RECIPES = [
     kid: { id: 'pasta', child: 40, big: 100, how: 'Koka orzo/liten pasta medan formen står i ugnen.' },
     steps: [
       { t: 'Ugnen på 200°. Skiva fänkål och zucchini tunt, lägg i en form med tomater, oliver, hälften av oljan och salt. In 10 min.', wait: '10 min – gör gremolatan: hacka mandel, persilja, vitlök, riv citronskal, blanda med resten av oljan.' },
-      { t: 'Lägg sejen ovanpå, salta. In 15 min (fryst: 25 min).', wait: '15 min – koka pastan.' },
+      { t: 'Lägg sejen ovanpå, salta. In 15 min (fryst: 25 min).', smart: 'Koka pastan samtidigt.', wait: '15 min – duka.' },
       { t: 'Toppa med gremolatan.' }
     ],
     temp: 'Sej: 50–52° kärntemp.',
@@ -391,8 +389,8 @@ window.SEED_RECIPES = [
     ],
     kid: { id: 'potatis', child: 120, big: 250, how: 'Koka potatisen parallellt, ca 20 min.' },
     steps: [
-      { t: 'Sätt på potatisen. Strimla vitkål och lök, skär äpplet i klyftor.' },
-      { t: 'Stek kål och lök i hälften av oljan på medelvärme 10 min, äpplet de sista 3 min. Salta, kummin.', wait: 'Rör då och då – rosta valnötterna torrt i en annan panna.' },
+      { t: 'Strimla vitkål och lök, skär äpplet i klyftor.', smart: 'Sätt på potatisen först.' },
+      { t: 'Stek kål och lök i hälften av oljan på medelvärme 10 min, äpplet de sista 3 min. Salta, kummin.', smart: 'Rosta valnötterna torrt i en annan panna under tiden.', wait: '10 min – rör då och då.' },
       { t: 'Skär bort fettkanten på kotletterna. Stek i resten av oljan, 3 min per sida. Vila 3 min.' },
       { t: 'Toppa kålen med valnötterna, servera med en klick dijon.' }
     ],
@@ -425,9 +423,9 @@ window.SEED_RECIPES = [
     kid: { id: 'surdegsbrod', child: 40, big: 100, how: 'Rostat bröd – inget att laga.' },
     steps: [
       { t: 'Fräs hackad lök, vitlök, ingefära och kryddor i oljan 3 min.' },
-      { t: 'Lägg i paprika, blomkål, linser, krossade tomater, buljong och ca 2 dl vatten per portion.' },
+      { t: 'Lägg i paprika, blomkål, linser, krossade tomater, buljong och ca 2 dl vatten per portion.', smart: 'Dubbla satsen nu om du vill ha fryslådor – samma arbete.' },
       { t: 'Sjud under lock 20 min.', wait: '20 min – fri tid.' },
-      { t: 'Mixa slät (eller låt vara rustik), smaka av med citron och salt.' },
+      { t: 'Mixa slät (eller låt vara rustik), smaka av med citron och salt.', smart: 'Stavmixer direkt i grytan – ingen extra disk.' },
       { t: 'Toppa med smulad feta och koriander.' }
     ],
     box: 'Utmärkt. Håller 4 dagar i kyl, fryser i 3 månader. Feta separat.',
