@@ -317,3 +317,8 @@ details.portions .scaler label { flex: 0 1 auto; }
   .bubble.wait b { color: #9fd2ff; }
 }
 details.portions > summary { display: inline-block; cursor: pointer; }
+details.meal > summary { list-style: none; cursor: pointer; }
+details.meal > summary::-webkit-details-marker { display: none; }
+details.meal > summary h2::before { content: '▸'; display: inline-block; width: 18px; color: var(--brand); transition: transform .15s; }
+details.meal[open] > summary h2::before { transform: rotate(90deg); }
+details.meal[open] > summary { margin-bottom: 8px; }

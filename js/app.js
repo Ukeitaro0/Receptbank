@@ -723,6 +723,7 @@
     return { n: addN(N0(), it.i, it.g), cost: lineCost(it.i, it.g), fu: i.fu ? it.g / i.fu : 0, name: i.name };
   }
   let PL_MEAL = 'frukost', PL_Q = '';
+  const PL_OPEN = new Set();
   function viewPlate(_, q) {
     const day = q.get('d') || today();
     const pl = plate(day); const p = S.profile;
@@ -746,15 +747,15 @@
         const s = ps.items.reduce((acc, [id, g]) => acc + addN(N0(), id, g)[4], 0);
         sugg.push(`<button class="chip-btn${ps.fav ? ' hl' : ''}" data-preset="${k}" data-m="${m}">${ps.fav ? '★ ' : ''}${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
       });
-      return `<section class="card meal">
-        <div class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor</span></div>
+      return `<details class="card meal" data-meal="${m}" ${PL_OPEN.has(m) ? 'open' : ''}>
+        <summary class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${c.items.length ? `${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor` : 'tomt'}</span></summary>
         ${c.items.length ? `<div class="pitems">${c.items.map((x) => `<div class="pitem">
           <span class="pn">${x.it.r ? `<a href="#/r/${encodeURIComponent(x.it.r)}">${esc(x.name)}</a>` : esc(x.name)}</span>
           ${x.it.r ? `<span class="pq">${stepperPortion(m, x.ix, x.it.f)}</span>` : `<span class="pq"><input type="number" inputmode="numeric" value="${x.it.g}" data-m="${m}" data-ix="${x.ix}"> g</span>`}
           <span class="ps">${fmt(x.n[4])} g</span>
           <button class="btn sm ghost" data-rm="${x.ix}" data-m="${m}" aria-label="ta bort">✕</button></div>`).join('')}</div>` : `<p class="muted small">Tomt.</p>`}
         <details ${c.items.length ? '' : 'open'}><summary>Färdiga förslag</summary><p class="muted small">Mättat fett per portion. Tryck för att lägga upp det på tallriken.</p><div class="sugg-chips">${sugg.join('')}</div></details>
-      </section>`;
+      </details>`;
     };
 
     app().innerHTML = `
@@ -787,8 +788,9 @@
       </section>
       <details class="fold small"><summary>Om värdena</summary><p class="muted small">Alla värden är grova uppskattningar per 100 g från vanliga svenska livsmedel och ordinarie priser. Budgeten på ${p.satBudget} g mättat fett motsvarar ca 7 % av energin vid 2 500 kcal. Fettkällor räknas enligt måltidsmallen (t.ex. 15 g olja, 20 g nötter eller 60 g avokado = 1). Ägg räknas som 55 g per styck. Recept räknas som en vuxen mallportion. Det du lägger upp sparas bara i den här webbläsaren – exportera under Mer för att flytta.</p></details>`;
 
+    $$('details.meal', app()).forEach((d) => d.addEventListener('toggle', () => { if (d.open) PL_OPEN.add(d.dataset.meal); else PL_OPEN.delete(d.dataset.meal); }));
     const rer = () => { const y = window.scrollY; viewPlate(_, q); window.scrollTo(0, y); };
-    $$('[data-addr]', app()).forEach((b) => b.onclick = () => { const m = b.dataset.m === '__sel' ? PL_MEAL : b.dataset.m; pl[m].push({ r: b.dataset.addr, f: 1 }); save(); rer(); });
+    $$('[data-addr]', app()).forEach((b) => b.onclick = () => { const m = b.dataset.m === '__sel' ? PL_MEAL : b.dataset.m; PL_OPEN.add(m); pl[m].push({ r: b.dataset.addr, f: 1 }); save(); rer(); });
     $$('[data-preset]', app()).forEach((b) => b.onclick = () => { PLATE_PRESETS[b.dataset.m][+b.dataset.preset].items.forEach(([i, g]) => pl[b.dataset.m].push({ i, g })); save(); rer(); });
     $$('[data-rm]', app()).forEach((b) => b.onclick = () => { pl[b.dataset.m].splice(+b.dataset.rm, 1); save(); rer(); });
     $$('.pitem input', app()).forEach((inp) => inp.onchange = () => { pl[inp.dataset.m][+inp.dataset.ix].g = Math.max(0, +inp.value || 0); save(); rer(); });
@@ -802,7 +804,7 @@
       const list = allIng().filter((i) => i.name.toLowerCase().includes(t)).slice(0, 10);
       pres.innerHTML = list.map((i) => { const g = i.pg || i.fu || (i.pcs && i.pcs < 200 ? i.pcs : 100); return `<button class="pres-i" data-i="${i.id}" data-g="${g}"><span>${esc(i.name)}</span><span class="muted small">${g} g · ${fmt(addN(N0(), i.id, g)[4])} g mättat</span></button>`; }).join('') +
         (list.length ? '' : `<p class="muted small">Hittar inget. <a href="#/mer#ing">Lägg till egen ingrediens</a></p>`);
-      $$('.pres-i', pres).forEach((b) => b.onclick = () => { pl[PL_MEAL].push({ i: b.dataset.i, g: +b.dataset.g }); PL_Q = ''; save(); rer(); toast(`${ing(b.dataset.i).name} → ${MEAL_NAME[PL_MEAL].toLowerCase()}`); });
+      $$('.pres-i', pres).forEach((b) => b.onclick = () => { PL_OPEN.add(PL_MEAL); pl[PL_MEAL].push({ i: b.dataset.i, g: +b.dataset.g }); PL_Q = ''; save(); rer(); toast(`${ing(b.dataset.i).name} → ${MEAL_NAME[PL_MEAL].toLowerCase()}`); });
     };
     pq.oninput = search; search();
   }
