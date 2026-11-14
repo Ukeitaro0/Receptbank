@@ -27,7 +27,7 @@
   const DEFAULT_STATE = {
     v: 1,
     profile: {
-      hh: { adults: 3, boxes: 2, kids: 1, big: 0 },
+      hh: { adults: 3, boxes: 2, kids: 1 },
       likes: [],
       avoid: ['Aubergine'],
       allergies: [],
@@ -35,9 +35,12 @@
       equipment: ['Ugn', 'Stekpanna', 'Stektermometer'],
       ldl: true, satDinner: 7.5,
       satBudget: 19, cholGoal: 300, bgGoal: 3,
-      costMin: 25, costMax: 45
+      costMin: 25, costMax: 45,
+      theme: 'auto', shopSort: 'avd'
     },
-    recipes: {}, hidden: [], plan: {}, plates: {}, customIng: [], shop: {}
+    recipes: {}, hidden: [], plan: {}, plates: {}, customIng: [], shop: {},
+    /* Skafferi: sådant som alltid finns hemma och därför inte hamnar på inköpslistan. */
+    pantry: ['salt', 'kryddor', 'soja', 'vinager', 'senap', 'buljong'], shopNeed: {}, shopExtra: {}
   };
 
   function load() {
@@ -47,13 +50,21 @@
         const m = Object.assign(clone(DEFAULT_STATE), s);
         m.profile = Object.assign(clone(DEFAULT_STATE.profile), s.profile || {});
         m.profile.hh = Object.assign(clone(DEFAULT_STATE.profile.hh), (s.profile || {}).hh || {});
+        if (m.profile.hh.big) m.profile.hh.adults += m.profile.hh.big; delete m.profile.hh.big; // storbarn = vuxna
         return m;
       }
     } catch (e) { /* trasig data – börja om */ }
     return clone(DEFAULT_STATE);
   }
   let S = load();
-  const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  function applyTheme() {
+    const t = S.profile.theme || 'auto';
+    const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const m = $('meta[name=theme-color]'); if (m) m.content = dark ? '#141311' : '#f1efe9';
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* lagring saknas (t.ex. förhandsvisning) */ } };
 
   /* ================= Datum ================= */
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -94,21 +105,29 @@
     return Math.round(g / 50) * 50;
   }
   const half = (x) => Math.round(x * 2) / 2;
+  const FRAC = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+  function frac(x) {
+    const w = Math.floor(x), f = Math.round((x - w) * 4) / 4;
+    if (f === 1) return String(w + 1);
+    return (w ? String(w) : '') + (f ? FRAC[f] : '') || '0';
+  }
+  const PLURAL = { klyfta: 'klyftor', 'tärning': 'tärningar', skiva: 'skivor', huvud: 'huvuden', kruka: 'krukor', burk: 'burkar', 'påse': 'påsar', ask: 'askar', knippe: 'knippen', filé: 'filéer', bit: 'bitar', paket: 'paket', 'stjälk': 'stjälkar', 'portion (0,9 dl)': 'portioner (0,9 dl)' };
   function amount(id, g) {
     const i = ing(id); const r = roundG(g);
     const w = r >= 1000 ? `${fmt(r / 1000, 2)} kg` : `${r} g`;
     if (i.msk && g <= 200) {
       const m = half(g / i.msk);
-      if (m >= 0.5 && m <= 6) return `${fmt(m)} msk <span class="muted">(${w})</span>`;
+      if (m >= 0.5 && m <= 6) return `${fmt(m)} msk <span class="muted">${w}</span>`;
     }
     if (i.pcs) {
-      const p = i.pcs <= 15 ? Math.max(1, Math.round(g / i.pcs)) : half(g / i.pcs);
-      const PL = { klyfta: 'klyftor', 'tärning': 'tärningar', skiva: 'skivor', huvud: 'huvuden' };
-      if (p >= 0.5) return `${w} <span class="muted">(≈ ${fmt(p)} ${p > 1 ? PL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st'})</span>`;
+      const x = g / i.pcs;
+      const q = i.pcs <= 15 ? Math.max(1, Math.round(x)) : x < 1 ? Math.max(0.25, Math.round(x * 4) / 4) : Math.round(x * 2) / 2;
+      const unit = q > 1 ? PLURAL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st';
+      return `≈ ${frac(q)} ${unit} <span class="muted">${w}</span>`;
     }
     return w;
   }
-  const amountText = (id, g) => amount(id, g).replace(/<[^>]+>/g, '');
+  const amountText = (id, g) => amount(id, g).replace(/<span class="muted">/g, '(').replace(/<\/span>/g, ')').replace(/<[^>]+>/g, '');
 
   /* ================= Recept ================= */
   function allRecipes() {
@@ -119,7 +138,23 @@
     return Object.values(m).sort((a, b) => a.title.localeCompare(b.title, 'sv'));
   }
   const getRecipe = (id) => allRecipes().find((r) => r.id === id);
-  const portions = (hh) => hh.adults + hh.boxes + hh.big + hh.kids * KID;
+  const portions = (hh) => hh.adults + hh.boxes + hh.kids * KID;
+
+  /* Rättyp: styr färg, prick i veckoremsan och emoji. */
+  const KIND = { fisk: ['🐟', 'Fisk'], fagel: ['🍗', 'Fågel'], kott: ['🥩', 'Kött'], vego: ['🥦', 'Vegetariskt'], agg: ['🥚', 'Ägg'] };
+  const KINDS = Object.keys(KIND);
+  function kindOf(r) {
+    const ps = (r.lines || []).filter((l) => l.role === 'protein').map((l) => ({ i: ing(l.id), w: l.g / (ing(l.id).pg || 125) })).sort((a, b) => b.w - a.w);
+    if (!ps.length || ps.some((p) => p.i.g === 4)) return 'vego';
+    const top = ps[0].i;
+    if (top.fisk) return 'fisk';
+    if (/^(kyckling|kalkon)/.test(top.id)) return 'fagel';
+    if (top.id === 'agg') return 'agg';
+    return top.g ? 'kott' : 'vego';
+  }
+  const EMOJI = [[/burgare/, '🍔'], [/soppa/, '🍲'], [/wok/, '🥡'], [/curry|gryta/, '🍛'], [/räk/, '🦐'], [/sallad/, '🥗']];
+  const emojiOf = (r) => r.emoji || (EMOJI.find(([re]) => re.test(r.title.toLowerCase())) || [])[1] || KIND[kindOf(r)][0];
+  const kindChip = (r) => { const k = kindOf(r); return chip(`${KIND[k][0]} ${KIND[k][1]}`, 'k-' + k); };
 
   function profileTokens() {
     return [...S.profile.avoid, ...S.profile.allergies].map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3);
@@ -133,7 +168,7 @@
     return [...hits];
   }
 
-  /* Mallcheck: räknar fram proteingrupp, fettkällor, grönsaker, kolhydrat, kostnad och flaggor. */
+  /* Mallcheck: räknar fram proteingrupp, fettkällor, grönsaker, kolhydrat och flaggor. */
   function analyze(r) {
     const lines = r.lines || [];
     const n = N0(); let cost = 0, costEco = 0;
@@ -231,32 +266,12 @@
     const dairy = fatUnits > 0 && dairyUnits / fatUnits >= 0.5;
     if (dairy) notes.push(['info', `Mejeri-gråzon: ${fmt(dairyUnits, 2)} av ${fmt(fatUnits, 2)} fettkällor är mejeri. ${r.dairyAlt ? 'Mejerifritt: ' + r.dairyAlt : 'Byt t.ex. grädde/ost mot olivolja, kokosmjölk eller nötter.'}`]);
 
-    /* Magkänsligt */
-    const mageLines = lines.filter((l) => ing(l.id).mage);
-    const mageG = mageLines.reduce((s, l) => s + l.g, 0);
-    const mage = mageG >= 100;
-    if (mage) {
-      const nm = mageLines.map((l) => ing(l.id).name.toLowerCase());
-      const gen = [nm.some((x) => /kål|broccoli/.test(x)) && 'kål → zucchini/haricots verts', nm.some((x) => /lök/.test(x)) && 'lök → gräslök', nm.some((x) => /ärt|bön|lins/.test(x)) && 'baljväxter → halvera, skölj väl'].filter(Boolean).join(', ');
-      notes.push(['info', `Magkänsligt: ${nm.join(', ')} (${roundG(mageG)} g/portion). ${r.mageSwap || 'Byt ' + gen + '.'}`]);
-    }
+    const mage = false;
 
     /* Undvik / allergier */
     const avoid = avoidHits(r);
     if (avoid.length) notes.push(['err', `Innehåller något du undviker: ${avoid.join(', ')}.`]);
 
-    /* Kostnad */
-    const p = S.profile;
-    if (cost > p.costMax) {
-      const cur = prot[0] && ing(prot[0].id);
-      let tip = '';
-      if (cur && cur.g) {
-        const alt = DB.list.filter((i) => i.g === cur.g && i.id !== cur.id && i.pg && (i.p * i.pg) / 1000 < lineCost(cur.id, prot[0].g) - 2)
-          .sort((a, b) => a.p * a.pg - b.p * b.pg).slice(0, 2);
-        if (alt.length) tip = ` Billigare i grupp ${cur.g}: ${alt.map((i) => `${i.name} (${kr((i.p * i.pg) / 1000)}/portion)`).join(', ')}.`;
-      }
-      notes.push(['warn', `${kr(cost)}/portion – över riktmärket ${p.costMin}–${p.costMax} kr.${tip}`]);
-    }
 
     const level = rows.some((x) => x.s === 'err') || notes.some((x) => x[0] === 'err') ? 'err' : rows.some((x) => x.s === 'warn') || notes.some((x) => x[0] === 'warn') ? 'warn' : 'ok';
     return { n, cost, costEco, group, fatReq, fatUnits, mainG, rows, notes, dairy, mage, avoid, level };
@@ -279,15 +294,9 @@
   const badge = (s) => `<span class="st st-${s}">${STATUS_ICON[s]}</span>`;
   const chip = (t, cls = '') => `<span class="chip ${cls}">${t}</span>`;
   const stepper = (key, val, min = 0) => `<span class="stepper" data-key="${key}"><button data-d="-1" ${val <= min ? 'disabled' : ''} aria-label="minska">−</button><b>${val}</b><button data-d="1" aria-label="öka">+</button></span>`;
-  function costChip(cost) {
-    const p = S.profile; const cls = cost > p.costMax ? 'chip-bad' : cost < p.costMin ? 'chip-good' : '';
-    return chip(`${kr(cost)}/port`, cls);
-  }
+  const satChip = (sat) => chip(`mättat ${fmt(sat)} g`, sat <= S.profile.satDinner ? 'chip-good' : sat > S.profile.satDinner * 1.15 ? 'chip-bad' : '');
   function recipeChips(r, a) {
-    const satC = S.profile.ldl ? chip(`mättat ${fmt(a.n[4])} g`, a.n[4] <= S.profile.satDinner ? 'chip-good' : a.n[4] > S.profile.satDinner * 1.15 ? 'chip-bad' : '') : '';
-    return [a.group ? chip(`G${a.group} ${GROUP_NAME[a.group].toLowerCase()}`) : '', chip(`⏱ ${r.active} min aktiv`), costChip(a.cost), satC,
-      r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.mage ? chip('mage', 'chip-info') : '', a.dairy ? chip('mejeri', 'chip-info') : '',
-      a.avoid.length ? chip('undvik!', 'chip-bad') : '', r.boxOk === false ? chip('ej matlåda', 'chip-info') : ''].join('');
+    return [chip(`⏱ ${r.active} min`), S.profile.ldl ? satChip(a.n[4]) : '', r.lyx ? chip('✨ fredag', 'chip-lyx') : '', a.avoid.length ? chip('undvik!', 'chip-bad') : ''].join('');
   }
 
   /* ================= Router ================= */
@@ -296,9 +305,12 @@
     const [path, qs] = h0.split('?');
     const parts = path.split('/').map(decodeURIComponent);
     const q = new URLSearchParams(qs || '');
-    const views = { vecka: viewWeek, forslag: viewSuggest, recept: viewList, r: viewRecipe, bygg: viewBuilder, tallrik: viewPlate, inkop: viewShop, mer: viewMore };
+    const views = { vecka: viewWeek, forslag: viewSuggest, recept: viewList, r: viewRecipe, laga: viewCook, bygg: viewBuilder, tallrik: viewPlate, inkop: viewShop, mer: viewMore };
     const v = views[parts[0]] || viewWeek;
-    const tab = { r: 'recept', bygg: 'recept', inkop: 'vecka' }[parts[0]] || parts[0];
+    const tab = { r: 'recept', bygg: 'recept', laga: 'recept', forslag: 'vecka' }[parts[0]] || parts[0];
+    const cooking = parts[0] === 'laga';
+    document.body.classList.toggle('cooking', cooking); keepAwake(cooking);
+    if (parts[0] !== 'vecka') LAST_FILL = null;
     $$('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
     v(parts.slice(1), q);
     const el = anchor && document.getElementById(anchor);
@@ -307,43 +319,81 @@
   const go = (h) => { if (location.hash === h) route(); else location.hash = h; };
 
   /* ================= Vecka ================= */
+  const SPECIAL = { '@ute': ['🍽️', 'Äta ute', 'Inte hemma'], '@rest': ['📦', 'Rester', 'Ingen matlagning'] };
+  const WD = ['mån', 'tis', 'ons', 'tors', 'fre', 'lör', 'sön'];
+  const planned = (d) => (S.plan[d] && !SPECIAL[S.plan[d]] && getRecipe(S.plan[d])) || null;
+  let LAST_FILL = null;
   function viewWeek(_, q) {
     const off = +(q.get('w') || 0);
-    const days = weekDays(off);
-    let total = 0, count = 0;
-    const rows = days.map((d) => {
-      const r = S.plan[d] && getRecipe(S.plan[d]);
-      const isToday = d === today();
+    const days = weekDays(off); const td = today();
+    const info = days.map((d) => { const r = planned(d); return { d, r, sp: SPECIAL[S.plan[d]], k: r && kindOf(r) }; });
+    const count = info.filter((x) => x.r).length;
+    const free = info.filter((x) => !x.r && !x.sp && x.d >= td).length;
+    const strip = info.map(({ d, r, sp, k }) => `<button class="wd${d === td ? ' on' : ''}" data-go="d-${d}"><span>${WD[wdIdx(d)]}</span><b>${parseISO(d).getDate()}</b><i class="dot${r ? ' k-' + k : sp ? ' k-sp' : ''}"></i></button>`).join('');
+    const rows = info.map(({ d, r, sp, k }) => {
+      const isT = d === td;
+      const date = `<div class="day-d"><span>${WD[wdIdx(d)]}</span><b>${parseISO(d).getDate()}</b></div>`;
+      const tonight = isT ? '<span class="tonight">I kväll</span>' : '';
       if (r) {
-        const a = analyze(r); total += a.cost * portions(S.profile.hh) + kidCost(r, S.profile.hh); count++;
-        return `<div class="day ${isToday ? 'today' : ''}">
-          <div class="day-h"><b>${dayName(d)}</b> <span class="muted">${shortDate(d)}</span></div>
-          <a class="day-r" href="#/r/${encodeURIComponent(r.id)}?d=${d}"><b>${esc(r.title)}</b><div class="chips">${recipeChips(r, a)}</div></a>
-          <div class="day-a"><a class="btn sm ghost" href="#/forslag?d=${d}" title="Byt">↻</a><button class="btn sm ghost" data-unplan="${d}" title="Ta bort">✕</button></div>
+        const a = analyze(r); const href = `#/r/${encodeURIComponent(r.id)}?d=${d}`;
+        const sat = S.profile.ldl ? ` · <span class="sat ${a.n[4] <= S.profile.satDinner ? 'good' : a.n[4] > S.profile.satDinner * 1.15 ? 'bad' : ''}">mättat ${fmt(a.n[4])} g</span>` : '';
+        return `<div class="day${isT ? ' today' : ''}" id="d-${d}">${date}
+          <a class="tile k-${k}" href="${href}" tabindex="-1" aria-hidden="true">${emojiOf(r)}</a>
+          <a class="day-r" href="${href}">${tonight}<b>${esc(r.title)}</b><span class="meta">${KIND[k][1]} · ${r.active} min${sat}${a.avoid.length ? ' · <span class="sat bad">undvik!</span>' : ''}</span></a>
+          <div class="day-a"><a class="x" href="#/forslag?d=${d}" title="Byt rätt" aria-label="Byt rätt">↻</a><button class="x" data-unplan="${d}" title="Ta bort" aria-label="Ta bort">✕</button></div>
         </div>`;
       }
-      return `<div class="day empty ${isToday ? 'today' : ''}">
-        <div class="day-h"><b>${dayName(d)}</b> <span class="muted">${shortDate(d)}</span></div>
-        <div class="day-r muted">Ingen middag planerad</div>
-        <div class="day-a"><a class="btn sm" href="#/forslag?d=${d}">Föreslå</a></div>
+      if (sp) {
+        return `<div class="day${isT ? ' today' : ''}" id="d-${d}">${date}
+          <span class="tile k-sp">${sp[0]}</span>
+          <div class="day-r">${tonight}<b>${sp[1]}</b><span class="meta">${sp[2]}</span></div>
+          <div class="day-a"><button class="x" data-unplan="${d}" title="Ta bort" aria-label="Ta bort">✕</button></div>
+        </div>`;
+      }
+      return `<div class="day empty${isT ? ' today' : ''}" id="d-${d}">${date}
+        <a class="tile add" href="#/forslag?d=${d}" aria-label="Föreslå middag">+</a>
+        <div class="day-r">${tonight}<span class="muted small">Inget planerat</span></div>
+        <div class="day-a"><a class="btn sm" href="#/forslag?d=${d}">Föreslå</a><button class="btn sm ghost" data-sp="${d}" title="Äta ute / inte hemma" aria-label="Äta ute">🍽️</button></div>
       </div>`;
     }).join('');
+    const title = off === 0 ? 'Den här veckan' : off === 1 ? 'Nästa vecka' : off === -1 ? 'Förra veckan' : `Vecka ${isoWeek(days[0])}`;
+    const undo = LAST_FILL && LAST_FILL.every((d) => days.includes(d)) ? LAST_FILL : null;
     app().innerHTML = `
-      <div class="head-row">
-        <a class="btn ghost" href="#/vecka?w=${off - 1}">‹</a>
-        <h1>Vecka ${isoWeek(days[0])}${off === 0 ? '' : ''}</h1>
-        <a class="btn ghost" href="#/vecka?w=${off + 1}">›</a>
+      <div class="wk-head">
+        <a class="iconbtn" href="#/vecka?w=${off - 1}" aria-label="Föregående vecka">‹</a>
+        <h1>${title}<small>vecka ${isoWeek(days[0])} · ${shortDate(days[0])}–${shortDate(days[6])}</small></h1>
+        <a class="iconbtn" href="#/vecka?w=${off + 1}" aria-label="Nästa vecka">›</a>
       </div>
-      ${off !== 0 ? `<p class="center"><a href="#/vecka">Till denna vecka</a></p>` : ''}
-      <div class="days">${rows}</div>
-      <div class="card sum">
-        <div><span class="muted">Planerat</span><b>${count} middagar</b></div>
-        <div><span class="muted">Kostnad, hela satser</span><b>${kr(total)}</b></div>
-        <a class="btn" href="#/inkop?w=${off}">🛒 Inköpslista</a>
-      </div>
+      <div class="strip">${strip}</div>
+      ${undo ? `<div class="banner"><span>✨ ${undo.length} dagar ifyllda efter kostreglerna</span><button class="linkbtn" id="undo-fill">Ångra</button></div>` : ''}
       ${S.profile.ldl && count ? weekBalance(days) : ''}
-      <p class="muted small">Satser räknas på ${hhText(S.profile.hh)} (ändras under Mer).</p>`;
-    $$('[data-unplan]', app()).forEach((b) => b.onclick = () => { delete S.plan[b.dataset.unplan]; save(); route(); });
+      <div class="days">${rows}</div>
+      ${free ? `<button class="btn full" id="fill" style="margin-top:12px">✨ Fyll ${free === 1 ? 'den tomma dagen' : `${free} tomma dagar`}</button>` : ''}
+      <a class="btn primary full big" href="#/inkop?w=${off}" style="margin-top:10px">Inköpslista · ${count} ${count === 1 ? 'middag' : 'middagar'}</a>
+      <p class="muted small center">Satser räknas på ${hhText(S.profile.hh)}.</p>`;
+    $$('[data-go]', app()).forEach((b) => b.onclick = () => document.getElementById(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    $$('[data-unplan]', app()).forEach((b) => b.onclick = () => { delete S.plan[b.dataset.unplan]; LAST_FILL = null; save(); rerenderWeek(q); });
+    $$('[data-sp]', app()).forEach((b) => b.onclick = () => { S.plan[b.dataset.sp] = '@ute'; save(); rerenderWeek(q); });
+    const fill = $('#fill'); if (fill) fill.onclick = () => {
+      const done = autoFill(days);
+      if (!done.length) return toast('Hittar inga recept som passar');
+      LAST_FILL = done; rerenderWeek(q);
+    };
+    const un = $('#undo-fill'); if (un) un.onclick = () => { LAST_FILL.forEach((d) => delete S.plan[d]); LAST_FILL = null; save(); rerenderWeek(q); };
+  }
+  function rerenderWeek(q) { const y = window.scrollY; viewWeek(null, q); window.scrollTo(0, y); }
+  /* Fyller veckans tomma dagar med samma poängsättning som Förslag: kostreglerna väger tyngst. */
+  function autoFill(days) {
+    const keep = { d: SG.d, lyx: SG.lyx, have: SG.have, group: SG.group, maxTime: SG.maxTime };
+    const done = [];
+    days.filter((d) => d >= today() && !S.plan[d]).forEach((d) => {
+      Object.assign(SG, { d, lyx: wdIdx(d) === 4, have: '', group: 0, maxTime: wdIdx(d) >= 4 ? 90 : 40 });
+      const used = new Set(days.map((x) => S.plan[x]));
+      const c = candidates().find((x) => !used.has(x.r.id));
+      if (c) { S.plan[d] = c.r.id; done.push(d); }
+    });
+    Object.assign(SG, keep); SG.shown = []; save();
+    return done;
   }
   const hasP = (r, k) => r.lines.some((l) => l.role === 'protein' && ing(l.id)[k]);
   function weekBalance(days) {
@@ -357,14 +407,16 @@
     </div></div>`;
   }
   function hhText(hh) {
-    const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlådor`); if (hh.kids) p.push(`${hh.kids} barn`); if (hh.big) p.push(`${hh.big} storbarn`);
-    return `${p.join(' + ')} = ${fmt(portions(hh))} portioner`;
+    return `${hhShort(hh)} = ${fmt(portions(hh))} portioner`;
   }
-  function kidCost(r, hh) { return r.kid ? lineCost(r.kid.id, kidGrams(r, hh)) : 0; }
-  function kidGrams(r, hh) { return r.kid ? r.kid.child * hh.kids + r.kid.big * hh.big : 0; }
+  function hhShort(hh) {
+    const p = [`${hh.adults} vuxna`]; if (hh.boxes) p.push(`${hh.boxes} matlåd${hh.boxes > 1 ? 'or' : 'a'}`); if (hh.kids) p.push(hh.kids > 1 ? `${hh.kids} barn` : 'Viggo');
+    return p.join(' + ');
+  }
+  function kidGrams(r, hh) { return r.kid ? r.kid.child * hh.kids : 0; }
 
   /* ================= Förslag ================= */
-  const SG = { d: null, maxTime: 40, group: 0, maxCost: 0, have: '', lyx: false, shown: [], seen: new Set(), key: '' };
+  const SG = { d: null, maxTime: 40, group: 0, have: '', lyx: false, shown: [], seen: new Set(), key: '' };
   function haveTokens() { return SG.have.split(/[,\n]+|\s{2,}/).map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3); }
   function haveMatches(r) {
     const toks = haveTokens(); if (!toks.length) return [];
@@ -378,7 +430,7 @@
     const wkOther = weekDays(wkOff).map((x) => x !== SG.d && S.plan[x] && getRecipe(S.plan[x])).filter(Boolean);
     const near = new Set(); for (let i = -10; i <= 10; i++) { const d = addDays(SG.d, i); if (i && S.plan[d]) near.add(S.plan[d]); }
     return allRecipes().map((r) => ({ r, a: analyze(r) })).filter(({ r, a }) =>
-      !a.avoid.length && r.active <= SG.maxTime && (!SG.group || a.group === SG.group) && (!SG.maxCost || a.cost <= SG.maxCost))
+      !a.avoid.length && r.active <= SG.maxTime && (!SG.group || a.group === SG.group))
       .map((c) => {
         const m = haveMatches(c.r);
         let score = Math.random() + m.length * 3;
@@ -405,16 +457,10 @@
     const days = weekDays(Math.round((parseISO(mondayOf(d)) - parseISO(mondayOf(today()))) / (7 * 864e5)));
     const cand = candidates(); const candMap = Object.fromEntries(cand.map((c) => [c.r.id, c]));
     const cards = SG.shown.map((id) => candMap[id] || (getRecipe(id) && { r: getRecipe(id), a: analyze(getRecipe(id)), m: haveMatches(getRecipe(id)) })).filter(Boolean).map(({ r, a, m }) => {
-      const pick = (role) => r.lines.filter((l) => l.role === role).map((l) => ing(l.id).name).join(', ');
       return `<div class="card sugg">
-        <h3>${esc(r.title)}</h3>
-        <p>${esc(r.why)}</p>
+        <div class="sugg-h"><span class="tile k-${kindOf(r)}">${emojiOf(r)}</span><h3>${esc(r.title)}</h3></div>
+        <p class="muted">${esc(r.why)}</p>
         <div class="chips">${recipeChips(r, a)}</div>
-        <ul class="mini">
-          <li><b>Protein</b> ${esc(pick('protein'))}</li>
-          <li><b>Grönt</b> ${esc([pick('main'), pick('side')].filter(Boolean).join(' · '))}</li>
-          <li><b>Kolhydrat</b> ${esc(pick('carb') || '–')}${r.kid ? ` · <span class="muted">Viggo: ${esc(ing(r.kid.id).name.toLowerCase())}</span>` : ''}</li>
-        </ul>
         ${m.length ? `<p class="have">✓ Har hemma: ${esc(m.join(', '))}</p>` : ''}
         <div class="btns">
           <button class="btn primary" data-ok="${esc(r.id)}">Godkänn för ${dayName(SG.d).toLowerCase()}</button>
@@ -424,14 +470,16 @@
       </div>`;
     }).join('');
     app().innerHTML = `
-      <h1>Förslag</h1>
+      <a class="back" href="#/vecka">‹ Veckan</a>
+      <h1>Förslag för ${dayName(SG.d).toLowerCase()}</h1>
       <div class="card filters">
         <label>Dag <select id="sg-d">${days.map((x) => `<option value="${x}" ${x === SG.d ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] ? ' ●' : ''}</option>`).join('')}</select></label>
+        <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
+        <details class="morefilt"${SG.maxTime !== 40 || SG.group || SG.lyx ? ' open' : ''}><summary>Fler filter</summary><div class="filters">
         <label>Max aktiv tid <select id="sg-t">${[15, 20, 30, 40, 90].map((t) => `<option value="${t}" ${t === SG.maxTime ? 'selected' : ''}>${t === 90 ? 'Ingen gräns' : t + ' min'}</option>`).join('')}</select></label>
         <label>Protein <select id="sg-g"><option value="0">Alla</option>${[1, 2, 3, 4].map((g) => `<option value="${g}" ${g === SG.group ? 'selected' : ''}>G${g} ${GROUP_NAME[g].toLowerCase()}</option>`).join('')}</select></label>
-        <label>Max kr/portion <select id="sg-c">${[0, 25, 35, 45].map((c) => `<option value="${c}" ${c === SG.maxCost ? 'selected' : ''}>${c ? c + ' kr' : 'Ingen gräns'}</option>`).join('')}</select></label>
-        <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
         <label class="check"><input type="checkbox" id="sg-l" ${SG.lyx ? 'checked' : ''}> Vardagslyx / fredag</label>
+        </div></details>
       </div>
       ${cards || `<div class="card empty-state"><p>Inget recept matchar filtren.</p><p><a href="#/bygg">Bygg ett eget i mallbyggaren</a></p></div>`}
       ${cand.length > 3 ? `<button class="btn ghost full" id="sg-all">↻ Tre nya förslag</button>` : ''}
@@ -440,7 +488,6 @@
     $('#sg-d').onchange = (e) => go(`#/forslag?d=${e.target.value}`);
     $('#sg-t').onchange = (e) => { SG.maxTime = +e.target.value; refilter(); };
     $('#sg-g').onchange = (e) => { SG.group = +e.target.value; refilter(); };
-    $('#sg-c').onchange = (e) => { SG.maxCost = +e.target.value; refilter(); };
     $('#sg-l').onchange = (e) => { SG.lyx = e.target.checked; refilter(); };
     $('#sg-h').onchange = (e) => { SG.have = e.target.value; refilter(); };
     const all = $('#sg-all'); if (all) all.onclick = () => {
@@ -462,22 +509,23 @@
   }
 
   /* ================= Receptlista ================= */
-  let LIST_Q = '', LIST_G = 0;
+  let LIST_Q = '', LIST_G = '';
   function viewList() {
     const rs = allRecipes().map((r) => ({ r, a: analyze(r) }));
     const t = LIST_Q.toLowerCase();
-    const show = rs.filter(({ r, a }) => (!LIST_G || a.group === LIST_G) &&
+    const show = rs.filter(({ r }) => (!LIST_G || kindOf(r) === LIST_G) &&
       (!t || r.title.toLowerCase().includes(t) || r.lines.some((l) => ing(l.id).name.toLowerCase().includes(t)) || (r.tags || []).some((x) => x.includes(t))));
     app().innerHTML = `
       <div class="head-row"><h1>Recept</h1><a class="btn primary" href="#/bygg">+ Nytt</a></div>
       <input class="search" id="lq" placeholder="Sök recept, ingrediens eller tagg" value="${esc(LIST_Q)}">
-      <div class="seg">${[0, 1, 2, 3, 4].map((g) => `<button data-g="${g}" class="${g === LIST_G ? 'on' : ''}">${g ? 'G' + g : 'Alla'}</button>`).join('')}</div>
+      <div class="seg">${['', ...KINDS].filter((k) => !k || rs.some(({ r }) => kindOf(r) === k)).map((k) => `<button data-g="${k}" class="${k === LIST_G ? 'on' : ''}">${k ? KIND[k][1] : 'Alla'}</button>`).join('')}</div>
       <div class="list">${show.map(({ r, a }) => `<a class="card item" href="#/r/${encodeURIComponent(r.id)}">
-        <div class="item-t">${badge(a.level)} <b>${esc(r.title)}</b>${r.seed ? '' : ' <span class="muted small">(egen)</span>'}</div>
-        <div class="chips">${recipeChips(r, a)}</div></a>`).join('') || '<p class="muted">Inga träffar.</p>'}</div>
-      <p class="muted small center">${rs.length} recept · ✓ följer mallen · ! avvikelse att titta på</p>`;
+        <span class="tile k-${kindOf(r)}">${emojiOf(r)}</span>
+        <div><b>${esc(r.title)}</b>${r.seed ? '' : '<span class="muted small">eget recept</span>'}
+        <div class="chips">${recipeChips(r, a)}</div></div></a>`).join('') || '<p class="muted">Inga träffar.</p>'}</div>
+      <p class="muted small center">${rs.length} recept</p>`;
     const lq = $('#lq'); lq.oninput = (e) => { LIST_Q = e.target.value; const pos = lq.selectionStart; viewList(); const n = $('#lq'); n.focus(); n.setSelectionRange(pos, pos); };
-    $$('.seg button', app()).forEach((b) => b.onclick = () => { LIST_G = +b.dataset.g; viewList(); });
+    $$('.seg button', app()).forEach((b) => b.onclick = () => { LIST_G = b.dataset.g; viewList(); });
   }
 
   /* ================= Recept ================= */
@@ -487,109 +535,92 @@
     if (!r) { app().innerHTML = '<p>Receptet finns inte.</p><a href="#/recept">Till recepten</a>'; return; }
     const d = q.get('d'); const preview = q.get('preview');
     const a = analyze(r); const P = portions(VHH);
-    const totCost = a.cost * P + kidCost(r, VHH), totEco = a.costEco * P + (r.kid ? lineCost(r.kid.id, kidGrams(r, VHH), true) : 0);
     const roles = ['protein', 'fat', 'main', 'side', 'carb', 'other'];
     const ingRows = roles.map((role) => {
       const ls = r.lines.filter((l) => l.role === role); if (!ls.length) return '';
       return `<tr class="grp"><th colspan="2">${ROLE_NAME[role]}</th></tr>` + ls.map((l) => {
         const i = ing(l.id);
-        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}${l.raw ? ' <span class="muted small">(rå)</span>' : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
+        return `<tr class="${role === 'fat' ? 'fatrow' : ''}"><td>${role === 'fat' ? tierDot(i) : ''}${esc(i.name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`;
       }).join('');
     }).join('');
     const fats = r.lines.filter((l) => l.role === 'fat');
-    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> för satsen <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
+    const fatRows = fats.map((l) => { const i = ing(l.id); const u = l.g / (i.fu || 15); return `<li>${tierDot(i)}<b>${esc(i.name)}</b> ${amount(l.id, l.g * P)}${l.note ? ` – ${esc(l.note)}` : ''} = <b>${fmt(u * P, 1)} ×</b> <span class="muted">(${fmt(u, 2)} × /portion)</span></li>`; }).join('');
     const kidG = kidGrams(r, VHH);
-    const ecoTips = [...new Set([...r.lines.map((l) => l.id), r.kid && r.kid.id].filter((id) => id && ing(id).ecoTip))].map((id) => `<li><b>${esc(ing(id).name)}:</b> ${esc(ing(id).ecoTip)}</li>`).join('');
-    const n = a.n; const satPct = Math.min(100, (n[4] / S.profile.satBudget) * 100);
+    const n = a.n;
     const planned = Object.keys(S.plan).filter((x) => S.plan[x] === r.id && x >= today()).sort()[0];
+    const issues = a.rows.filter((x) => x.s === 'warn' || x.s === 'err').length + a.notes.filter(([s]) => s === 'warn' || s === 'err').length;
 
     app().innerHTML = `
-      <a class="back" href="${d ? '#/vecka' : '#/recept'}">‹ ${d ? 'Veckan' : 'Recepten'}</a>
+      <div class="topbar">
+        <a class="iconbtn" href="${d ? '#/vecka' : '#/recept'}" aria-label="Tillbaka">‹</a><span class="sp"></span>
+        <a class="iconbtn" href="#/bygg/${encodeURIComponent(r.id)}" aria-label="Redigera" title="Redigera">✎</a>
+        <button class="iconbtn" id="cp" aria-label="Kopiera som text" title="Kopiera som text">⧉</button>
+      </div>
+      <div class="hero k-${kindOf(r)}">${emojiOf(r)}</div>
       <h1>${esc(r.title)}</h1>
+      <div class="chips">${kindChip(r)}${chip(`⏱ ${r.active} min aktiv · ${r.total} min totalt`)}${S.profile.ldl ? satChip(n[4]) : ''}${r.lyx ? chip('✨ fredag', 'chip-lyx') : ''}${a.avoid.length ? chip('undvik!', 'chip-bad') : ''}</div>
       <p class="why">${esc(r.why)}</p>
-      <div class="chips">${recipeChips(r, a)}${chip(`⏲ ${r.total} min totalt`)}</div>
       ${preview && d ? `<div class="card cta"><span>Passar den ${dayName(d).toLowerCase()}?</span><button class="btn primary" id="ok">Godkänn</button><a class="btn ghost" href="#/forslag?d=${d}">Tillbaka</a></div>` : ''}
 
       <section class="card">
-        <h2>Mallcheck <span class="muted small">per vuxenportion</span></h2>
-        <table class="check">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
-        ${a.notes.length ? `<ul class="notes">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}
-      </section>
-
-      <section class="card">
-        <h2>Ingredienser</h2>
-        <div class="scaler">
-          <label>Vuxna ${stepper('adults', VHH.adults)}</label>
-          <label>Matlådor ${stepper('boxes', VHH.boxes)}</label>
-          <label>Viggo ${stepper('kids', VHH.kids)}</label>
-          <label>Storbarn ${stepper('big', VHH.big)}</label>
+        <div class="ing-head">
+          <h2>Ingredienser</h2>
+          <details class="portions"><summary>${hhShort(VHH)}</summary>
+            <div class="scaler">
+              <label>Vuxna ${stepper('adults', VHH.adults)}</label>
+              <label>Matlådor ${stepper('boxes', VHH.boxes)}</label>
+              <label>Viggo ${stepper('kids', VHH.kids)}</label>
+            </div>
+            <button class="linkbtn" id="save-hh">Spara som standard</button>
+          </details>
         </div>
-        <p class="muted small">${hhText(VHH)} (barnportion ≈ ${KID} vuxen)</p>
         <table class="ing">${ingRows}</table>
-        <div class="fatbox">
-          <h3><span class="fatdot"></span> Fett i satsen – ${fmt(a.fatUnits * P, 1)} × fettkälla</h3>
-          <ul>${fatRows || '<li>Inget tillsatt fett.</li>'}</ul>
-          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion. Tillagnings- och tillbehörsfett räknas båda.${S.profile.ldl ? '<br><span class="fatdot t-green"></span>omättat <span class="fatdot t-yellow"></span>ost/mejeri <span class="fatdot t-red"></span>mättat' : ''}</p>
-        </div>
+        ${r.kid && kidG ? `<div class="kidline"><b>Till Viggo:</b> ${esc(ing(r.kid.id).name.toLowerCase())} ${amount(r.kid.id, kidG)}<span class="muted"> – lagas separat. ${esc(r.kid.how)}</span></div>` : ''}
+        ${r.mageSwap ? `<p class="alt">🔁 <b>Alternativ:</b> ${esc(r.mageSwap)}</p>` : ''}
+        <details class="fold"><summary><span class="fatdot"></span>Fett i satsen: ${fmt(a.fatUnits * P, 1)} × fettkälla</summary>
+          <ul class="fatlist">${fatRows || '<li>Inget tillsatt fett.</li>'}</ul>
+          <p class="muted small">Mallen: grupp ${a.group || '–'} → ${fmt(a.fatReq, 2)} × per portion.${S.profile.ldl ? ' <span class="fatdot t-green"></span>omättat <span class="fatdot t-yellow"></span>ost/mejeri <span class="fatdot t-red"></span>mättat' : ''}</p>
+        </details>
       </section>
-
-      ${r.kid ? `<section class="card">
-        <h2>Tillbehör Viggo / storbarnen</h2>
-        <p><b>${esc(ing(r.kid.id).name)}</b> – lagas separat, blandas aldrig i huvudrätten.</p>
-        <ul class="plain">
-          <li>Viggo: <b>${amount(r.kid.id, r.kid.child)}</b></li>
-          <li>Storbarn/vuxen som äter "vanligt": <b>${amount(r.kid.id, r.kid.big)}</b> per person</li>
-          ${kidG ? `<li>Totalt nu: <b>${amount(r.kid.id, kidG)}</b></li>` : '<li class="muted">Ingen satt till barn/storbarn just nu.</li>'}
-        </ul>
-        <p class="muted">${esc(r.kid.how)}</p>
-      </section>` : ''}
 
       <section class="card">
         <h2>Gör så här</h2>
-        <ol class="steps">${r.steps.map((s) => `<li>${esc(s.t)}${s.wait ? `<div class="wait">⏳ ${esc(s.wait)}</div>` : ''}</li>`).join('')}</ol>
+        <ol class="steps">${r.steps.map((s) => `<li>${esc(s.t)}${s.smart ? `<div class="bubble smart"><b>⚡ Passa på</b> ${esc(s.smart)}</div>` : ''}${s.wait ? `<div class="bubble wait"><b>⏳ Dötid</b> ${esc(s.wait)}</div>` : ''}</li>`).join('')}</ol>
         ${r.temp ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}
-        ${r.double ? `<p class="double">×2 ${esc(r.double)}</p>` : ''}
       </section>
 
-      <section class="card">
-        <h2>Matlåda ${r.boxOk === false ? chip('passar dåligt', 'chip-bad') : ''}</h2>
-        <p>${esc(r.box || '–')}</p>
+      <section class="card tips">
+        <p>📦 <b>Matlåda${r.boxOk === false ? ' – passar dåligt' : ''}:</b> ${esc(r.box || '–')}</p>
+        ${r.double ? `<p>×2 <b>Laga dubbelt:</b> ${esc(r.double)}</p>` : ''}
+        ${r.upgrade ? `<p>✨ <b>Vardagslyx:</b> ${esc(r.upgrade)}</p>` : ''}
       </section>
 
-      <section class="card">
-        <h2>Kostnad</h2>
-        <div class="cost">
-          <div><span class="muted">Hela satsen</span><b>${kr(totCost)}</b><span class="muted small">eko: ${kr(totEco)}</span></div>
-          <div><span class="muted">Per vuxenportion</span><b>${kr(a.cost)}</b><span class="muted small">eko: ${kr(a.costEco)}</span></div>
-          <div><span class="muted">Riktmärke</span><b>${S.profile.costMin}–${S.profile.costMax} kr</b><span class="small ${a.cost > S.profile.costMax ? 'bad' : 'good'}">${a.cost > S.profile.costMax ? 'Över' : 'Inom'}</span></div>
-        </div>
-        ${ecoTips ? `<h3>Eko – värt det?</h3><ul class="plain small">${ecoTips}</ul>` : ''}
-        <p class="muted small">Ordinarie pris, grovt uppskattat. Priser kan ändras under Mer → Egna ingredienser.</p>
-      </section>
+      <details class="card fold">
+        <summary>${badge(a.level)} Mallcheck <span class="muted small">${issues ? `${issues} att titta på` : 'följer mallen'}</span></summary>
+        <table class="check">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
+        ${a.notes.length ? `<ul class="notes">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}
+      </details>
 
-      <section class="card">
-        <h2>Näring per vuxenportion</h2>
+      <details class="card fold">
+        <summary>Näring per portion <span class="muted small">${Math.round(n[0])} kcal · ${fmt(n[1], 0)} g protein · ${fmt(n[4])} g mättat</span></summary>
         <div class="macros">
           <div><b>${Math.round(n[0])}</b><span>kcal</span></div><div><b>${fmt(n[1], 0)} g</b><span>protein</span></div>
           <div><b>${fmt(n[2], 0)} g</b><span>fett</span></div><div><b>${fmt(n[3], 0)} g</b><span>kolhydrat</span></div>
         </div>
-        <div class="bar"><div style="width:${satPct}%" class="${n[4] > S.profile.satBudget * 0.5 ? 'amber' : ''}"></div></div>
-        <p class="small">Mättat fett <b>${fmt(n[4])} g</b> = ${Math.round((n[4] / S.profile.satBudget) * 100)} % av dagsbudgeten ${S.profile.satBudget} g · Kolesterol ${Math.round(n[5])} mg · Betaglukan ${fmt(n[6])} g</p>
-      </section>
-
-      ${r.upgrade ? `<section class="card lyx"><h2>✨ Vardagslyx-växeln</h2><p>${esc(r.upgrade)}</p></section>` : ''}
+        <p class="small">Mättat fett <b>${fmt(n[4])} g</b> (${Math.round((n[4] / S.profile.satBudget) * 100)} % av dagens ${S.profile.satBudget} g) · Kolesterol ${Math.round(n[5])} mg · Betaglukan ${fmt(n[6])} g</p>
+      </details>
 
       <div class="actions">
-        <label class="planner">Planera <select id="plan-d"><option value="">välj dag…</option>${[...weekDays(0), ...weekDays(1)].map((x) => `<option value="${x}" ${x === (d || planned) ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] && S.plan[x] !== r.id ? ' (upptagen)' : ''}</option>`).join('')}</select></label>
+        <select id="plan-d" class="plan-sel"><option value="">📅 Planera…</option>${[...weekDays(0), ...weekDays(1)].map((x) => `<option value="${x}" ${x === (d || planned) ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] && S.plan[x] !== r.id ? ' (upptagen)' : ''}</option>`).join('')}</select>
         <button class="btn" id="to-plate">🍽 Lägg på tallriken</button>
-        <a class="btn ghost" href="#/bygg/${encodeURIComponent(r.id)}">✎ Redigera</a>
-        <button class="btn ghost" id="cp">⧉ Kopiera som text</button>
-        <button class="btn ghost" id="save-hh">Spara portioner som standard</button>
-      </div>`;
+      </div>
+      ${r.steps.length ? `<div class="cookbar"><a class="btn primary full big" href="#/laga/${encodeURIComponent(r.id)}${d ? '?d=' + d : ''}">🍳 Börja laga mat</a></div>` : ''}`;
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => {
       VHH[s.dataset.key] = Math.max(0, VHH[s.dataset.key] + +b.dataset.d); const y = window.scrollY; route(); window.scrollTo(0, y);
+      const dd = $('details.portions'); if (dd) dd.open = true;
     }));
+    if (COOK.id !== r.id) COOK.i = 0;
     const ok = $('#ok'); if (ok) ok.onclick = () => { S.plan[d] = r.id; save(); toast(`Planerad: ${dayName(d)}`); go(`#/r/${encodeURIComponent(r.id)}?d=${d}`); };
     $('#plan-d').onchange = (e) => { if (!e.target.value) return; S.plan[e.target.value] = r.id; save(); toast(`Planerad: ${dayName(e.target.value)} ${shortDate(e.target.value)}`); };
     $('#to-plate').onclick = () => {
@@ -597,7 +628,7 @@
       pl.middag = pl.middag.filter((x) => !x.r); pl.middag.push({ r: r.id, f: 1 }); save();
       toast(`Middag ${shortDate(day)} lagd på tallriken`); go(`#/tallrik?d=${day}`);
     };
-    $('#cp').onclick = () => copyText(recipeText(r, a));
+    $('#cp').onclick = (e) => { e.preventDefault(); copyText(recipeText(r, a)); };
     $('#save-hh').onclick = () => { S.profile.hh = clone(VHH); save(); toast('Sparat som standard'); };
   }
 
@@ -608,17 +639,143 @@
     a.notes.forEach(([, t]) => L.push(`- OBS: ${t}`));
     L.push('', `## Ingredienser (${hhText(VHH)})`);
     r.lines.forEach((l) => L.push(`- ${amountText(l.id, l.g * P)} ${ing(l.id).name}${l.role === 'fat' ? ` [fettkälla ${fmt((l.g / (ing(l.id).fu || 15)) * P, 1)} ×]` : ''}${l.note ? ' – ' + l.note : ''}`));
-    if (r.kid) L.push('', '## Tillbehör Viggo/storbarn', `- ${ing(r.kid.id).name}: Viggo ${amountText(r.kid.id, r.kid.child)}, storbarn ${amountText(r.kid.id, r.kid.big)}/person. ${r.kid.how}`);
-    L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
+    if (r.kid) L.push('', '## Till Viggo', `- ${ing(r.kid.id).name} ${amountText(r.kid.id, r.kid.child)} – lagas separat. ${r.kid.how}`);
+    L.push('', '## Gör så här'); r.steps.forEach((s, i) => L.push(`${i + 1}. ${s.t}${s.smart ? ` (⚡ Passa på: ${s.smart})` : ''}${s.wait ? ` (⏳ ${s.wait})` : ''}`));
     if (r.temp) L.push(`Kärntemp: ${r.temp}`);
-    L.push('', `## Matlåda`, r.box || '–', '', `## Kostnad`, `- Hela satsen ca ${kr(a.cost * P + kidCost(r, VHH))}, ${kr(a.cost)}/vuxenportion (eko ${kr(a.costEco)})`);
+    L.push('', '## Matlåda', r.box || '–');
     if (r.upgrade) L.push('', `## Vardagslyx-växeln`, r.upgrade);
     return L.join('\n');
   }
 
+  /* ================= Timrar ================= */
+  const TKEY = 'receptbank.timers';
+  let TIMERS = []; try { TIMERS = JSON.parse(sessionStorage.getItem(TKEY)) || []; } catch (e) { /* ingen lagring */ }
+  const saveTimers = () => { try { sessionStorage.setItem(TKEY, JSON.stringify(TIMERS)); } catch (e) { /* ingen lagring */ } };
+  let actx = null, tickH = null;
+  /* Ljudet måste låsas upp av ett tryck (iPhone), därför skapas ljudmotorn när timern startas. */
+  function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; } }
+  function beep() {
+    try {
+      unlockAudio();
+      [0, 0.28, 0.56].forEach((dt) => {
+        const o = actx.createOscillator(), g = actx.createGain(); const t = actx.currentTime + dt;
+        o.frequency.value = 880; o.connect(g); g.connect(actx.destination);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.start(t); o.stop(t + 0.24);
+      });
+    } catch (e) { /* inget ljud */ }
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+  }
+  const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  function startTimer(min, label, title) {
+    unlockAudio();
+    TIMERS.push({ id: Date.now().toString(36), label, title, end: Date.now() + min * 60000, total: min * 60000 });
+    saveTimers(); renderTimers();
+  }
+  function renderTimers() {
+    $('#timers').innerHTML = TIMERS.map((t) => `<div class="tm${t.done ? ' done' : ''}" data-tid="${t.id}"><span class="tm-i">⏱</span><span class="tm-l"><small>${esc(t.title)}</small><b>${esc(t.label)}</b></span><span class="tm-left"></span><button data-add aria-label="Lägg till en minut">+1</button><button data-x aria-label="Stäng timern">✕</button><i class="tm-bar"><i></i></i></div>`).join('');
+    document.body.classList.toggle('has-timers', TIMERS.length > 0);
+    if (TIMERS.length && !tickH) tickH = setInterval(tick, 500);
+    if (!TIMERS.length && tickH) { clearInterval(tickH); tickH = null; }
+    tick();
+  }
+  function tick() {
+    const now = Date.now(); let changed = false;
+    TIMERS.forEach((t) => {
+      const left = t.end - now;
+      if (left <= 0 && !t.done) { t.done = true; t.rings = 0; t.lastRing = 0; changed = true; }
+      if (t.done && t.rings < 6 && now - t.lastRing > 2500) { t.rings++; t.lastRing = now; beep(); }
+      const el = $(`[data-tid="${t.id}"]`);
+      if (el) { $('.tm-left', el).textContent = t.done ? 'Klar!' : mmss(left); $('.tm-bar i', el).style.width = `${Math.max(0, Math.min(100, 100 * (1 - left / t.total)))}%`; }
+    });
+    if (changed) { saveTimers(); renderTimers(); }
+  }
+  $('#timers').addEventListener('click', (e) => {
+    const el = e.target.closest('[data-tid]'); if (!el) return;
+    const t = TIMERS.find((x) => x.id === el.dataset.tid); if (!t) return;
+    if (e.target.closest('[data-x]')) TIMERS = TIMERS.filter((x) => x !== t);
+    else if (e.target.closest('[data-add]')) { t.end = Math.max(Date.now(), t.end) + 60000; t.total += 60000; t.done = false; }
+    else return;
+    saveTimers(); renderTimers();
+  });
+
+  /* ================= Matlagningsläge ================= */
+  const COOK = { id: null, i: 0 };
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => (wakeLock = null)); }
+      if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+    } catch (e) { wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('cooking')) keepAwake(true); });
+  /* Plockar ut tider ur stegtexten: "10 min", "12–15 min" (den kortare), "1 timme". */
+  function stepTimers(s) {
+    const out = [];
+    const re = /(\d+)(?:\s*[–-]\s*\d+)?\s*(min(?:uter)?|tim(?:mar|me)?)(?![a-zåäö])/gi;
+    [s.t, s.wait].filter(Boolean).forEach((txt) => {
+      let m; re.lastIndex = 0;
+      while ((m = re.exec(txt))) { const min = +m[1] * (/^tim/i.test(m[2]) ? 60 : 1); if (min > 0 && min <= 600 && !out.includes(min)) out.push(min); }
+    });
+    return out;
+  }
+  function viewCook(parts, q) {
+    const r = getRecipe(parts[0]);
+    if (!r || !r.steps.length) return go('#/recept');
+    const d = q.get('d');
+    if (COOK.id !== r.id) { COOK.id = r.id; COOK.i = 0; }
+    const N = r.steps.length; COOK.i = Math.max(0, Math.min(COOK.i, N));
+    const i = COOK.i; const s = r.steps[i]; const P = portions(VHH);
+    const back = `#/r/${encodeURIComponent(r.id)}${d ? '?d=' + d : ''}`;
+    const body = s
+      ? `<p class="cook-n">Steg ${i + 1} av ${N}</p>
+         <p class="cook-t">${esc(s.t)}</p>
+         ${s.smart ? `<div class="bubble smart"><b>⚡ Passa på</b> ${esc(s.smart)}</div>` : ''}
+         ${s.wait ? `<div class="bubble wait"><b>⏳ Dötid</b> ${esc(s.wait)}</div>` : ''}
+         <div class="cook-timers">${stepTimers(s).map((m) => `<button class="btn" data-timer="${m}">⏱ Timer ${m} min</button>`).join('')}</div>
+         ${r.temp && i === N - 1 ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}`
+      : `<div class="cook-done"><p class="cook-n">Klart</p>
+         <p class="cook-t">Smaklig måltid!</p>
+         ${r.temp ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}
+         ${r.box ? `<p>📦 <b>Matlåda${r.boxOk === false ? ' – passar dåligt' : ''}:</b> ${esc(r.box)}</p>` : ''}
+         <button class="btn primary full big" id="ck-plate">🍽 Lägg på tallriken</button>
+         <a class="btn ghost full" href="${back}">Tillbaka till receptet</a></div>`;
+    app().innerHTML = `
+      <div class="cook-top"><a class="iconbtn" href="${back}" aria-label="Stäng matlagningsläget">✕</a><b class="serif">${esc(r.title)}</b><button class="iconbtn" id="ck-ing" aria-label="Visa ingredienser">☰</button></div>
+      <div class="cook-body">${body}</div>
+      <div class="cook-nav">
+        <button class="btn ghost big" id="ck-prev" ${i === 0 ? 'disabled' : ''}>‹ Bakåt</button>
+        <div class="dots">${[...Array(N + 1)].map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+        <button class="btn primary big" id="ck-next" ${i === N ? 'disabled' : ''}>${i === N - 1 ? 'Klar ✓' : 'Nästa ›'}</button>
+      </div>
+      <dialog class="sheet" id="ck-sheet"><div class="sheet-in">
+        <div class="sheet-h"><h2>Ingredienser</h2><button class="iconbtn" id="ck-close" aria-label="Stäng">✕</button></div>
+        <p class="muted small">${hhText(VHH)}</p>
+        <table class="ing">${r.lines.map((l) => `<tr><td>${l.role === 'fat' ? tierDot(ing(l.id)) : ''}${esc(ing(l.id).name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`).join('')}
+        ${r.kid && kidGrams(r, VHH) ? `<tr><td>Till Viggo: ${esc(ing(r.kid.id).name.toLowerCase())}</td><td class="num">${amount(r.kid.id, kidGrams(r, VHH))}</td></tr>` : ''}</table>
+      </div></dialog>`;
+    const step = (n) => { COOK.i = Math.max(0, Math.min(N, i + n)); viewCook(parts, q); window.scrollTo(0, 0); };
+    $('#ck-prev').onclick = () => step(-1);
+    $('#ck-next').onclick = () => step(1);
+    $$('[data-timer]', app()).forEach((b) => b.onclick = () => { startTimer(+b.dataset.timer, `Steg ${i + 1} · ${b.dataset.timer} min`, r.title); toast(`Timer ${b.dataset.timer} min startad`); });
+    const sheet = $('#ck-sheet');
+    $('#ck-ing').onclick = () => (sheet.showModal ? sheet.showModal() : sheet.setAttribute('open', ''));
+    $('#ck-close').onclick = () => (sheet.close ? sheet.close() : sheet.removeAttribute('open'));
+    sheet.onclick = (e) => { if (e.target === sheet) sheet.close(); };
+    const pl = $('#ck-plate'); if (pl) pl.onclick = () => {
+      const day = d || today(); const p = plate(day);
+      p.middag = p.middag.filter((x) => !x.r); p.middag.push({ r: r.id, f: 1 }); save();
+      toast('Middagen ligger på tallriken'); go(`#/tallrik?d=${day}`);
+    };
+    let x0 = null;
+    const bodyEl = $('.cook-body');
+    bodyEl.ontouchstart = (e) => { x0 = e.touches[0].clientX; };
+    bodyEl.ontouchend = (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); };
+  }
+
   /* ================= Mallbyggare ================= */
   let DRAFT = null, DRAFT_SRC = null;
-  const blankRecipe = () => ({ id: '', title: '', why: '', active: 20, total: 30, tags: [], lines: [], kid: { id: 'potatis', child: 120, big: 250, how: '' }, steps: [], box: '', boxOk: true, upgrade: '', temp: '', double: '', mageSwap: '', dairyAlt: '', lyx: false });
+  const blankRecipe = () => ({ id: '', title: '', why: '', active: 20, total: 30, tags: [], lines: [], kid: { id: 'potatis', child: 120, how: '' }, steps: [], box: '', boxOk: true, upgrade: '', temp: '', double: '', mageSwap: '', dairyAlt: '', lyx: false });
   const PICK = {
     protein: (i) => i.g || i.g4, fat: (i) => i.fu, main: (i) => i.veg === 'main', side: (i) => i.veg === 'side',
     carb: (i) => i.carb || i.nomall, other: () => true
@@ -676,18 +833,17 @@
       ${section('carb', 'frivilligt, EN')}
       ${section('other', 'kryddor, soja, buljong…')}
       <section class="card">
-        <h2>Tillbehör Viggo / storbarn</h2>
+        <h2>Tillbehör till Viggo</h2>
         <div class="row">
           <label>Vad <select id="k-id"><option value="">– inget –</option>${kidOpts}</select></label>
           <label>Viggo <input type="number" id="k-child" value="${D.kid.child}"> g</label>
-          <label>Storbarn <input type="number" id="k-big" value="${D.kid.big}"> g</label>
         </div>
         <label class="wide">Hur det lagas parallellt <input id="k-how" value="${esc(D.kid.how)}"></label>
       </section>
       <section class="card">
         <h2>Gör så här</h2>
-        <p class="muted small">Ett steg per rad. Dötid skrivs efter <code>||</code>, t.ex. <code>Rosta 20 min || duka och bada Viggo</code>.</p>
-        <textarea id="b-steps" rows="7">${esc(D.steps.map((s) => s.t + (s.wait ? ' || ' + s.wait : '')).join('\n'))}</textarea>
+        <p class="muted small">Ett steg per rad. Dötid efter <code>||</code>, "passa på" efter ett andra <code>||</code>. T.ex. <code>Rosta 20 min || duka || sätt på potatisen</code>.</p>
+        <textarea id="b-steps" rows="7">${esc(D.steps.map((s) => s.t + (s.wait || s.smart ? ' || ' + (s.wait || '') : '') + (s.smart ? ' || ' + s.smart : '')).join('\n'))}</textarea>
         <label class="wide">Kärntemp (stektermometer) <input id="b-temp" value="${esc(D.temp || '')}"></label>
         <label class="wide">Laga dubbelt? <input id="b-double" value="${esc(D.double || '')}"></label>
       </section>
@@ -695,7 +851,7 @@
         <label class="wide">Matlåda – hur den håller, värms, packas <textarea id="b-box" rows="2">${esc(D.box || '')}</textarea></label>
         <label class="check"><input type="checkbox" id="b-boxok" ${D.boxOk !== false ? 'checked' : ''}> Funkar som matlåda</label>
         <label class="wide">✨ Vardagslyx-växeln <input id="b-upgrade" value="${esc(D.upgrade || '')}"></label>
-        <label class="wide">Bytesförslag om magkänsligt <input id="b-mage" value="${esc(D.mageSwap || '')}"></label>
+        <label class="wide">Alternativ / byte (valfritt) <input id="b-mage" value="${esc(D.mageSwap || '')}"></label>
         <label class="wide">Mejerifritt alternativ <input id="b-dairy" value="${esc(D.dairyAlt || '')}"></label>
       </section>
       <div class="actions">
@@ -709,8 +865,8 @@
     bind('#b-title', (e) => (D.title = e.value)); bind('#b-why', (e) => (D.why = e.value));
     bind('#b-active', (e) => (D.active = +e.value || 0)); bind('#b-total', (e) => (D.total = +e.value || 0));
     bind('#b-lyx', (e) => (D.lyx = e.checked)); bind('#b-tags', (e) => (D.tags = e.value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)));
-    bind('#k-id', (e) => (D.kid.id = e.value)); bind('#k-child', (e) => (D.kid.child = +e.value || 0)); bind('#k-big', (e) => (D.kid.big = +e.value || 0)); bind('#k-how', (e) => (D.kid.how = e.value));
-    bind('#b-steps', (e) => (D.steps = e.value.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const [t, w] = x.split('||').map((y) => y.trim()); return w ? { t, wait: w } : { t }; })));
+    bind('#k-id', (e) => (D.kid.id = e.value)); bind('#k-child', (e) => (D.kid.child = +e.value || 0)); bind('#k-how', (e) => (D.kid.how = e.value));
+    bind('#b-steps', (e) => (D.steps = e.value.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const [t, w, m] = x.split('||').map((y) => y.trim()); const o = { t }; if (w) o.wait = w; if (m) o.smart = m; return o; })));
     bind('#b-temp', (e) => (D.temp = e.value)); bind('#b-double', (e) => (D.double = e.value)); bind('#b-box', (e) => (D.box = e.value));
     bind('#b-boxok', (e) => (D.boxOk = e.checked)); bind('#b-upgrade', (e) => (D.upgrade = e.value)); bind('#b-mage', (e) => (D.mageSwap = e.value)); bind('#b-dairy', (e) => (D.dairyAlt = e.value));
 
@@ -749,7 +905,7 @@
   function rerender() { const y = window.scrollY; viewBuilder([DRAFT_SRC]); window.scrollTo(0, y); }
   function renderCheck() {
     const a = analyze(Object.assign({ title: '' }, DRAFT));
-    $('#bcheck').innerHTML = `<div class="bc-head">${badge(a.level)} <b>Mallcheck</b> <span class="muted">${kr(a.cost)}/portion · ${Math.round(a.n[0])} kcal · mättat ${fmt(a.n[4])} g</span></div>
+    $('#bcheck').innerHTML = `<div class="bc-head">${badge(a.level)} <b>Mallcheck</b> <span class="muted">${Math.round(a.n[0])} kcal · mättat ${fmt(a.n[4])} g</span></div>
       <table class="check small">${a.rows.map((x) => `<tr><td>${badge(x.s)}</td><th>${x.k}</th><td>${x.v}</td></tr>`).join('')}</table>
       ${a.notes.length ? `<ul class="notes small">${a.notes.map(([s, t]) => `<li class="n-${s}">${badge(s)} ${esc(t)}</li>`).join('')}</ul>` : ''}`;
   }
@@ -769,6 +925,7 @@
     return { n: addN(N0(), it.i, it.g), cost: lineCost(it.i, it.g), fu: i.fu ? it.g / i.fu : 0, name: i.name };
   }
   let PL_MEAL = 'frukost', PL_Q = '';
+  const PL_OPEN = new Set();
   function viewPlate(_, q) {
     const day = q.get('d') || today();
     const pl = plate(day); const p = S.profile;
@@ -790,17 +947,17 @@
       if (m === 'lunch') recentBoxes.forEach((r) => sugg.push(`<button class="chip-btn hl" data-addr="${esc(r.id)}" data-m="lunch">Matlåda: ${esc(r.title)}</button>`));
       (PLATE_PRESETS[m] || []).forEach((ps, k) => {
         const s = ps.items.reduce((acc, [id, g]) => acc + addN(N0(), id, g)[4], 0);
-        sugg.push(`<button class="chip-btn" data-preset="${k}" data-m="${m}">${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
+        sugg.push(`<button class="chip-btn${ps.fav ? ' hl' : ''}" data-preset="${k}" data-m="${m}">${ps.fav ? '★ ' : ''}${esc(ps.name)} <span class="muted">${fmt(s)} g</span></button>`);
       });
-      return `<section class="card meal">
-        <div class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor · ${kr(c.cost)}</span></div>
+      return `<details class="card meal" data-meal="${m}" ${PL_OPEN.has(m) ? 'open' : ''}>
+        <summary class="meal-h"><h2>${MEAL_NAME[m]}</h2><span class="muted small">${c.items.length ? `${fmt(c.n[4])} g mättat · ${fmt(c.fu, 1)} fettkällor` : 'tomt'}</span></summary>
         ${c.items.length ? `<div class="pitems">${c.items.map((x) => `<div class="pitem">
           <span class="pn">${x.it.r ? `<a href="#/r/${encodeURIComponent(x.it.r)}">${esc(x.name)}</a>` : esc(x.name)}</span>
           ${x.it.r ? `<span class="pq">${stepperPortion(m, x.ix, x.it.f)}</span>` : `<span class="pq"><input type="number" inputmode="numeric" value="${x.it.g}" data-m="${m}" data-ix="${x.ix}"> g</span>`}
           <span class="ps">${fmt(x.n[4])} g</span>
           <button class="btn sm ghost" data-rm="${x.ix}" data-m="${m}" aria-label="ta bort">✕</button></div>`).join('')}</div>` : `<p class="muted small">Tomt.</p>`}
         <details ${c.items.length ? '' : 'open'}><summary>Färdiga förslag</summary><p class="muted small">Mättat fett per portion. Tryck för att lägga upp det på tallriken.</p><div class="sugg-chips">${sugg.join('')}</div></details>
-      </section>`;
+      </details>`;
     };
 
     app().innerHTML = `
@@ -809,7 +966,7 @@
         <h1>${day === today() ? 'Bygg din tallrik' : `${dayName(day)} ${shortDate(day)}`}</h1>
         <a class="btn ghost" href="#/tallrik?d=${addDays(day, 1)}">›</a>
       </div>
-      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : `<p class="muted small center">Sätt ihop dagens måltider och se direkt mättat fett, kolesterol, betaglukan och kostnad.</p>`}
+      ${day !== today() ? `<p class="center"><a href="#/tallrik">Till idag</a></p>` : ''}
       <section class="card summary">
         <h2>Mättat fett i dag</h2>
         <div class="big ${over ? 'bad' : ''}"><b>${fmt(sat)}</b> / ${p.satBudget} g</div>
@@ -819,9 +976,8 @@
         <div class="kpis">
           <div class="${tot.n[5] > p.cholGoal ? 'bad' : ''}"><span>Kolesterol</span><b>${Math.round(tot.n[5])} mg</b><small>mål under ${p.cholGoal} mg</small></div>
           <div class="${tot.n[6] >= p.bgGoal ? 'good' : ''}"><span>Betaglukan</span><b>${fmt(tot.n[6])} g</b><small>mål minst ${p.bgGoal} g</small></div>
-          <div><span>Kostnad</span><b>${kr(tot.cost)}</b><small>ca, din portion</small></div>
-          <div><span>Energi</span><b>${Math.round(tot.n[0])}</b><small>kcal · ${fmt(tot.n[1], 0)} g protein</small></div>
         </div>
+        <p class="muted small macroline">${Math.round(tot.n[0])} kcal · protein ${fmt(tot.n[1], 0)} g · fett ${fmt(tot.n[2], 0)} g · kolhydrat ${fmt(tot.n[3], 0)} g</p>
       </section>
       ${isEmpty && day !== today() && S.plates[addDays(day, -1)] ? `<button class="btn ghost full" id="copy-prev">Kopiera gårdagens tallrik</button>` : ''}
       ${MEALS.map(mealHtml).join('')}
@@ -832,10 +988,11 @@
         <div class="pres" id="pres"></div>
         <details><summary>Lägg till recept från banken</summary><div class="sugg-chips">${allRecipes().map((r) => `<button class="chip-btn" data-addr="${esc(r.id)}" data-m="__sel">${esc(r.title)}</button>`).join('')}</div></details>
       </section>
-      <p class="muted small">Alla värden är grova uppskattningar per 100 g från vanliga svenska livsmedel och ordinarie priser. Budgeten på ${p.satBudget} g mättat fett motsvarar ca 7 % av energin vid 2 500 kcal. Fettkällor räknas enligt måltidsmallen (t.ex. 15 g olja, 20 g nötter eller 60 g avokado = 1). Ägg räknas som 55 g per styck. Recept räknas som en vuxen mallportion. Det du lägger upp sparas bara i den här webbläsaren – exportera under Mer för att flytta.</p>`;
+      <details class="fold small"><summary>Om värdena</summary><p class="muted small">Alla värden är grova uppskattningar per 100 g från vanliga svenska livsmedel och ordinarie priser. Budgeten på ${p.satBudget} g mättat fett motsvarar ca 7 % av energin vid 2 500 kcal. Fettkällor räknas enligt måltidsmallen (t.ex. 15 g olja, 20 g nötter eller 60 g avokado = 1). Ägg räknas som 55 g per styck. Recept räknas som en vuxen mallportion. Det du lägger upp sparas bara i den här webbläsaren – exportera under Mer för att flytta.</p></details>`;
 
+    $$('details.meal', app()).forEach((d) => d.addEventListener('toggle', () => { if (d.open) PL_OPEN.add(d.dataset.meal); else PL_OPEN.delete(d.dataset.meal); }));
     const rer = () => { const y = window.scrollY; viewPlate(_, q); window.scrollTo(0, y); };
-    $$('[data-addr]', app()).forEach((b) => b.onclick = () => { const m = b.dataset.m === '__sel' ? PL_MEAL : b.dataset.m; pl[m].push({ r: b.dataset.addr, f: 1 }); save(); rer(); });
+    $$('[data-addr]', app()).forEach((b) => b.onclick = () => { const m = b.dataset.m === '__sel' ? PL_MEAL : b.dataset.m; PL_OPEN.add(m); pl[m].push({ r: b.dataset.addr, f: 1 }); save(); rer(); });
     $$('[data-preset]', app()).forEach((b) => b.onclick = () => { PLATE_PRESETS[b.dataset.m][+b.dataset.preset].items.forEach(([i, g]) => pl[b.dataset.m].push({ i, g })); save(); rer(); });
     $$('[data-rm]', app()).forEach((b) => b.onclick = () => { pl[b.dataset.m].splice(+b.dataset.rm, 1); save(); rer(); });
     $$('.pitem input', app()).forEach((inp) => inp.onchange = () => { pl[inp.dataset.m][+inp.dataset.ix].g = Math.max(0, +inp.value || 0); save(); rer(); });
@@ -849,36 +1006,77 @@
       const list = allIng().filter((i) => i.name.toLowerCase().includes(t)).slice(0, 10);
       pres.innerHTML = list.map((i) => { const g = i.pg || i.fu || (i.pcs && i.pcs < 200 ? i.pcs : 100); return `<button class="pres-i" data-i="${i.id}" data-g="${g}"><span>${esc(i.name)}</span><span class="muted small">${g} g · ${fmt(addN(N0(), i.id, g)[4])} g mättat</span></button>`; }).join('') +
         (list.length ? '' : `<p class="muted small">Hittar inget. <a href="#/mer#ing">Lägg till egen ingrediens</a></p>`);
-      $$('.pres-i', pres).forEach((b) => b.onclick = () => { pl[PL_MEAL].push({ i: b.dataset.i, g: +b.dataset.g }); PL_Q = ''; save(); rer(); toast(`${ing(b.dataset.i).name} → ${MEAL_NAME[PL_MEAL].toLowerCase()}`); });
+      $$('.pres-i', pres).forEach((b) => b.onclick = () => { PL_OPEN.add(PL_MEAL); pl[PL_MEAL].push({ i: b.dataset.i, g: +b.dataset.g }); PL_Q = ''; save(); rer(); toast(`${ing(b.dataset.i).name} → ${MEAL_NAME[PL_MEAL].toLowerCase()}`); });
     };
     pq.oninput = search; search();
   }
   const stepperPortion = (m, ix, f) => `<span class="stepper pstep"><button data-d="-0.25" data-m="${m}" data-ix="${ix}">−</button><b>${fmt(f, 2)} port</b><button data-d="0.25" data-m="${m}" data-ix="${ix}">+</button></span>`;
 
   /* ================= Inköpslista ================= */
+  const AISLES = [['Frukt & grönt', '🥬'], ['Bröd', '🍞'], ['Kött & fisk', '🥩'], ['Mejeri & ägg', '🧀'], ['Skafferi', '🫙'], ['Frys', '🧊'], ['Övrigt', '🛒']];
+  /* I butiken köper man hela förpackningar: avrunda uppåt till hela styck, annars vikt. */
+  function shopAmount(id, g) {
+    const i = ing(id); const r = roundG(g);
+    if (i.pcs) { const n = Math.max(1, Math.ceil(g / i.pcs - 0.15)); return `${n} ${n > 1 ? PLURAL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st'}`; }
+    return r >= 1000 ? `${fmt(r / 1000, 2)} kg` : `${r} g`;
+  }
+  const aisleOf = (id) => (AISLES.some(([a]) => a === ing(id).a) ? ing(id).a : 'Övrigt');
   function viewShop(_, q) {
     const off = +(q.get('w') || 0); const days = weekDays(off); const wk = days[0];
     const hh = S.profile.hh; const P = portions(hh);
-    const tot = {}; const used = [];
+    const tot = {}, by = {}, meals = [];
     days.forEach((d) => {
-      const r = S.plan[d] && getRecipe(S.plan[d]); if (!r) return; used.push(`${dayName(d).slice(0, 3)}: ${r.title}`);
-      r.lines.forEach((l) => (tot[l.id] = (tot[l.id] || 0) + l.g * P));
-      if (r.kid && kidGrams(r, hh)) tot[r.kid.id] = (tot[r.kid.id] || 0) + kidGrams(r, hh);
+      const r = planned(d); if (!r) return;
+      const items = r.lines.map((l) => [l.id, l.g * P]);
+      if (r.kid && kidGrams(r, hh)) items.push([r.kid.id, kidGrams(r, hh)]);
+      meals.push({ d, r, items });
+      items.forEach(([id, g]) => { tot[id] = (tot[id] || 0) + g; by[id] = by[id] || []; if (!by[id].includes(r)) by[id].push(r); });
     });
     const checked = S.shop[wk] || (S.shop[wk] = {});
-    const groups = {};
-    Object.entries(tot).forEach(([id, g]) => { const a = ing(id).a || 'Övrigt'; (groups[a] = groups[a] || []).push([id, g]); });
-    const order = Object.values(DB.aisles).concat('Övrigt');
-    let cost = 0; Object.entries(tot).forEach(([id, g]) => !checked[id] && (cost += lineCost(id, g)));
+    const need = S.shopNeed[wk] || (S.shopNeed[wk] = {});
+    const extra = S.shopExtra[wk] || (S.shopExtra[wk] = []);
+    const atHome = (id) => S.pantry.includes(id) && !need[id];
+    const byName = (a, b) => ing(a).name.localeCompare(ing(b).name, 'sv');
+    const buy = Object.keys(tot).filter((id) => !atHome(id)).sort(byName);
+    const home = Object.keys(tot).filter(atHome).sort(byName);
+    const perRecipe = S.profile.shopSort === 'recept';
+    const left = buy.filter((id) => !checked[id]).length + extra.filter((x) => !x.done).length;
+    const row = (id, g, badges) => `<li class="${checked[id] ? 'done' : ''}" data-id="${id}"><button class="ck" role="checkbox" aria-checked="${!!checked[id]}" aria-label="${esc(ing(id).name)}"></button><span class="nm">${esc(ing(id).name)}</span><span class="amt">${shopAmount(id, g)}</span>${badges ? `<span class="rb">${by[id].map((r) => `<i class="k-${kindOf(r)}" title="${esc(r.title)}">${emojiOf(r)}</i>`).join('')}</span>` : ''}<button class="pan" data-pan="${id}" title="Har alltid hemma" aria-label="Har alltid hemma: ${esc(ing(id).name)}">⌂</button></li>`;
+    const sections = perRecipe
+      ? meals.map(({ d, r, items }) => { const ls = items.filter(([id]) => !atHome(id)); return ls.length ? `<h2 class="aisle">${emojiOf(r)} ${WD[wdIdx(d)]} · ${esc(r.title)}</h2><ul class="shop card">${ls.map(([id, g]) => row(id, g, false)).join('')}</ul>` : ''; }).join('')
+      : AISLES.map(([a, e]) => { const ids = buy.filter((id) => aisleOf(id) === a); return ids.length ? `<h2 class="aisle">${e} ${a}</h2><ul class="shop card">${ids.map((id) => row(id, tot[id], true)).join('')}</ul>` : ''; }).join('');
+    const wkName = off === 0 ? 'Den här veckan' : off === 1 ? 'Nästa vecka' : `Vecka ${isoWeek(wk)}`;
     app().innerHTML = `
-      <a class="back" href="#/vecka?w=${off}">‹ Veckan</a>
-      <h1>Inköpslista v${isoWeek(wk)}</h1>
-      ${used.length ? `<p class="muted small">${used.map(esc).join(' · ')}</p><p class="muted small">Räknat på ${hhText(hh)}. Bocka av det du redan har hemma.</p>` : '<p>Inga middagar planerade den här veckan.</p>'}
-      ${order.filter((a) => groups[a]).map((a) => `<section class="card"><h2>${a}</h2><ul class="shop">${groups[a].sort((x, y) => ing(x[0]).name.localeCompare(ing(y[0]).name, 'sv')).map(([id, g]) =>
-        `<li class="${checked[id] ? 'done' : ''}"><label><input type="checkbox" data-id="${id}" ${checked[id] ? 'checked' : ''}> <span>${esc(ing(id).name)}</span> <span class="amt">${amount(id, g)}</span></label></li>`).join('')}</ul></section>`).join('')}
-      ${used.length ? `<div class="card sum"><div><span class="muted">Kvar att handla, ca</span><b>${kr(cost)}</b></div><button class="btn" id="cp-shop">⧉ Kopiera listan</button></div>` : ''}`;
-    $$('.shop input', app()).forEach((c) => c.onchange = () => { checked[c.dataset.id] = c.checked; if (!c.checked) delete checked[c.dataset.id]; save(); const y = window.scrollY; viewShop(_, q); window.scrollTo(0, y); });
-    const cp = $('#cp-shop'); if (cp) cp.onclick = () => copyText(order.filter((a) => groups[a]).map((a) => `${a}\n` + groups[a].filter(([id]) => !checked[id]).map(([id, g]) => `- ${ing(id).name} ${amountText(id, g)}`).join('\n')).join('\n\n'));
+      <div class="shop-head">
+        <div><h1>Inköpslista</h1><p class="muted small">${meals.length} ${meals.length === 1 ? 'middag' : 'middagar'} · ${hhShort(hh)} · ${perRecipe ? 'per recept' : 'per avdelning'}</p></div>
+        <div class="shop-tools"><button class="iconbtn" id="sort" title="Byt sortering" aria-label="Byt sortering">≡</button><button class="iconbtn" id="share" title="Dela listan" aria-label="Dela listan">⇪</button></div>
+      </div>
+      <div class="seg"><a href="#/inkop?w=0" class="${off === 0 ? 'on' : ''}">Den här veckan</a><a href="#/inkop?w=1" class="${off === 1 ? 'on' : ''}">Nästa vecka</a>${off !== 0 && off !== 1 ? `<a class="on">${wkName}</a>` : ''}</div>
+      ${meals.length ? '' : `<div class="card empty-state"><p>Inga middagar planerade ${wkName.toLowerCase()}.</p><p><a href="#/vecka?w=${off}">Planera veckan</a></p></div>`}
+      ${sections}
+      <h2 class="aisle">✏️ Eget</h2>
+      ${extra.length ? `<ul class="shop card">${extra.map((x, ix) => `<li class="${x.done ? 'done' : ''}" data-ex="${ix}"><button class="ck" role="checkbox" aria-checked="${!!x.done}" aria-label="${esc(x.t)}"></button><span class="nm">${esc(x.t)}</span><button class="pan" data-exrm="${ix}" aria-label="Ta bort ${esc(x.t)}">✕</button></li>`).join('')}</ul>` : ''}
+      <form class="addrow" id="add"><input id="add-t" placeholder="Lägg till egen vara, t.ex. mjölk" autocomplete="off"><button class="btn">Lägg till</button></form>
+      ${home.length ? `<details class="card fold" id="home"><summary>🧺 Finns hemma · ${home.length}</summary><p class="muted small">Det här behövs i veckans recept men ligger i skafferiet, så det hamnar inte på listan.</p><ul class="shop">${home.map((id) => `<li class="homerow"><span class="nm">${esc(ing(id).name)}</span><span class="amt">${shopAmount(id, tot[id])}</span><button class="btn sm" data-need="${id}">Slut – köp</button><button class="pan" data-unpan="${id}" title="Ta bort ur skafferiet" aria-label="Ta bort ur skafferiet">✕</button></li>`).join('')}</ul></details>` : ''}
+      ${meals.length ? `<p class="muted small center">Tryck på en vara när den ligger i vagnen. ⌂ = har alltid hemma (flyttas till skafferiet).</p>` : ''}
+      ${left ? `<div style="margin-top:14px"><button class="btn primary full big" id="share2">⇪ Dela ${left} varor</button></div>` : ''}`;
+    const rer = () => { save(); const y = window.scrollY; const open = ($('#home') || {}).open; viewShop(_, q); window.scrollTo(0, y); if (open && $('#home')) $('#home').open = true; };
+    $$('li[data-id]', app()).forEach((li) => li.onclick = () => { const id = li.dataset.id; if (checked[id]) delete checked[id]; else checked[id] = true; rer(); });
+    $$('[data-pan]', app()).forEach((b) => b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.pan; if (!S.pantry.includes(id)) S.pantry.push(id); delete need[id]; toast(`${ing(id).name} → Finns hemma`); rer(); });
+    $$('[data-need]', app()).forEach((b) => b.onclick = () => { need[b.dataset.need] = true; rer(); });
+    $$('[data-unpan]', app()).forEach((b) => b.onclick = () => { S.pantry = S.pantry.filter((x) => x !== b.dataset.unpan); rer(); });
+    $$('li[data-ex]', app()).forEach((li) => li.onclick = () => { const x = extra[+li.dataset.ex]; x.done = !x.done; rer(); });
+    $$('[data-exrm]', app()).forEach((b) => b.onclick = (e) => { e.stopPropagation(); extra.splice(+b.dataset.exrm, 1); rer(); });
+    $('#add').onsubmit = (e) => { e.preventDefault(); const t = $('#add-t').value.trim(); if (!t) return; extra.push({ t }); rer(); $('#add-t').focus(); };
+    $('#sort').onclick = () => { S.profile.shopSort = perRecipe ? 'avd' : 'recept'; rer(); };
+    const text = () => AISLES.map(([a]) => { const ids = buy.filter((id) => aisleOf(id) === a && !checked[id]); return ids.length ? `${a}\n` + ids.map((id) => `${ing(id).name} ${shopAmount(id, tot[id])}`).join('\n') : ''; })
+      .concat(extra.some((x) => !x.done) ? 'Eget\n' + extra.filter((x) => !x.done).map((x) => x.t).join('\n') : '').filter(Boolean).join('\n\n');
+    const share = () => {
+      if (!left) return toast('Listan är tom');
+      if (navigator.share) navigator.share({ title: `Inköpslista ${wkName.toLowerCase()}`, text: text() }).catch(() => {});
+      else copyText(text());
+    };
+    $('#share').onclick = share; const s2 = $('#share2'); if (s2) s2.onclick = share;
   }
 
   /* ================= Mer ================= */
@@ -890,12 +1088,15 @@
       <section class="card">
         <h2>Hushåll – standardskalning</h2>
         <div class="scaler">
-          <label>Vuxna till middag ${stepper('adults', p.hh.adults)}</label>
+          <label>Vuxna ${stepper('adults', p.hh.adults)}</label>
           <label>Matlådor ${stepper('boxes', p.hh.boxes)}</label>
           <label>Viggo ${stepper('kids', p.hh.kids)}</label>
-          <label>Ebba/Theo ${stepper('big', p.hh.big)}</label>
         </div>
-        <p class="muted small">${hhText(p.hh)}</p>
+        <p class="muted small">${hhText(p.hh)}. Ebba/Theo räknas som vuxna när de äter med.</p>
+      </section>
+      <section class="card">
+        <h2>Utseende</h2>
+        <div class="seg" style="margin:0">${[['auto', 'Följ telefonen'], ['light', 'Ljust'], ['dark', 'Mörkt']].map(([k, n]) => `<button data-theme-set="${k}" class="${(p.theme || 'auto') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       </section>
       <section class="card">
         <h2>Smakprofil</h2>
@@ -918,35 +1119,30 @@
           <label>Kolesterol under <input type="number" data-num="cholGoal" value="${p.cholGoal}"> mg</label>
           <label>Betaglukan minst <input type="number" data-num="bgGoal" value="${p.bgGoal}"> g</label>
         </div>
-        <div class="row">
-          <label>Kostnad/portion från <input type="number" data-num="costMin" value="${p.costMin}"> kr</label>
-          <label>till <input type="number" data-num="costMax" value="${p.costMax}"> kr</label>
-        </div>
       </section>
       <section class="card" id="claude">
         <h2>Nytt recept med Claude</h2>
         <ol class="small">
           <li>Kopiera instruktionen och klistra in i Claude-projektet tillsammans med din önskan ("något med sej, 20 min").</li>
           <li>Godkänn förslaget i chatten och be om receptet som JSON.</li>
-          <li>Klistra in svaret här nedan. Appen räknar mall, fett, kostnad och makron själv.</li>
+          <li>Klistra in svaret här nedan. Appen räknar mall, fett och makron själv.</li>
         </ol>
         <button class="btn" id="cp-prompt">⧉ Kopiera instruktion till Claude</button>
         <textarea id="imp-json" rows="5" placeholder='Klistra in Claudes JSON-svar här'></textarea>
         <button class="btn primary" id="imp-go">Importera recept</button>
       </section>
       <section class="card" id="ing">
-        <h2>Egna ingredienser & priser</h2>
-        <p class="muted small">Lägg till det som saknas, eller skriv in samma namn som en befintlig för att ändra pris/värden. Näring per 100 g.</p>
+        <h2>Egna ingredienser</h2>
+        <p class="muted small">Lägg till det som saknas, eller skriv in samma namn som en befintlig för att ändra dess värden. Näring per 100 g.</p>
         <div class="ingform">
           <label class="wide">Namn <input id="ci-name" list="ci-list"><datalist id="ci-list">${DB.list.map((i) => `<option value="${esc(i.name)}">`).join('')}</datalist></label>
           <label>Typ <select id="ci-cat"><option value="protein">Protein</option><option value="fat">Fett</option><option value="veg-main">Huvudgrönsak</option><option value="veg-side">Sidogrönsak</option><option value="carb">Kolhydrat (mall)</option><option value="kid">Barntillbehör</option><option value="other">Övrigt</option></select></label>
           <label>Proteingrupp <select id="ci-g"><option value="">–</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
           ${['kcal', 'protein', 'fett', 'kolhydrat', 'mättat fett', 'kolesterol mg', 'betaglukan'].map((x, k) => `<label>${x} <input type="number" step="any" data-n="${k}" value="0"></label>`).join('')}
-          <label>Pris kr/kg <input type="number" id="ci-p" value="0"></label>
           <label>1 × fettkälla = <input type="number" id="ci-fu" placeholder="g"> g</label>
         </div>
         <button class="btn" id="ci-add">Spara ingrediens</button>
-        ${S.customIng.length ? `<ul class="plain small">${S.customIng.map((i) => `<li>${esc(i.name)} · ${i.p} kr/kg <button class="btn sm ghost" data-rmi="${i.id}">✕</button></li>`).join('')}</ul>` : ''}
+        ${S.customIng.length ? `<ul class="plain small">${S.customIng.map((i) => `<li>${esc(i.name)} <button class="btn sm ghost" data-rmi="${i.id}">✕</button></li>`).join('')}</ul>` : ''}
       </section>
       <section class="card">
         <h2>Backup & flytta mellan enheter</h2>
@@ -958,6 +1154,7 @@
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => { p.hh[s.dataset.key] = Math.max(0, p.hh[s.dataset.key] + +b.dataset.d); VHH = clone(p.hh); save(); const y = window.scrollY; viewMore(); window.scrollTo(0, y); }));
     $$('[data-list]', app()).forEach((t) => t.onchange = () => { p[t.dataset.list] = t.value.split('\n').map((x) => x.trim()).filter(Boolean); save(); toast('Sparat'); });
+    $$('[data-theme-set]', app()).forEach((b) => b.onclick = () => { p.theme = b.dataset.themeSet; save(); applyTheme(); const y = window.scrollY; viewMore(); window.scrollTo(0, y); });
     $('#ldl').onchange = (e) => { p.ldl = e.target.checked; save(); toast(p.ldl ? 'LDL-läge på' : 'LDL-läge av'); };
     $$('[data-num]', app()).forEach((t) => t.onchange = () => { p[t.dataset.num] = +t.value || 0; save(); toast('Sparat'); });
     $('#cp-prompt').onclick = () => copyText(claudePrompt());
@@ -971,7 +1168,7 @@
     $('#imp').onchange = (e) => {
       const f = e.target.files[0]; if (!f) return;
       f.text().then((t) => {
-        try { const d = JSON.parse(t); if (!d.v) throw 0; if (!confirm('Ersätta all data i appen med filens innehåll?')) return; localStorage.setItem(KEY, JSON.stringify(d)); S = load(); rebuildIng(); VHH = clone(S.profile.hh); toast('Importerat'); go('#/vecka'); }
+        try { const d = JSON.parse(t); if (!d.v) throw 0; if (!confirm('Ersätta all data i appen med filens innehåll?')) return; localStorage.setItem(KEY, JSON.stringify(d)); S = load(); rebuildIng(); VHH = clone(S.profile.hh); applyTheme(); toast('Importerat'); go('#/vecka'); }
         catch (err) { toast('Filen kunde inte läsas'); }
       });
     };
@@ -982,7 +1179,7 @@
     const name = $('#ci-name').value.trim(); if (!name) return toast('Ange namn');
     const existing = DB.list.find((i) => i.name.toLowerCase() === name.toLowerCase());
     const cat = $('#ci-cat').value; const n = $$('[data-n]', app()).map((x) => +x.value || 0);
-    const o = existing ? Object.assign(clone(existing), { p: +$('#ci-p').value || existing.p }) : { id: 'c-' + slug(name), name, cat: cat.split('-')[0], n, p: +$('#ci-p').value || 0, a: 'Övrigt' };
+    const o = existing ? Object.assign(clone(existing), { p: existing.p }) : { id: 'c-' + slug(name), name, cat: cat.split('-')[0], n, p: 0, a: 'Övrigt' };
     if (existing && n.some((x) => x)) o.n = n;
     if (!existing) {
       if (cat === 'veg-main') o.veg = 'main'; if (cat === 'veg-side') o.veg = 'side';
@@ -1000,16 +1197,16 @@
 
 {"title":"…","why":"en rad om varför den passar i kväll","active":20,"total":30,"tags":["fisk"],"lyx":false,
  "lines":[{"id":"sej","g":125,"role":"protein"},{"id":"olivolja","g":30,"role":"fat","note":"stekning"},{"id":"broccoli","g":130,"role":"main"},{"id":"citron","g":10,"role":"side","raw":true},{"id":"morot","g":100,"role":"carb"},{"id":"salt","g":1,"role":"other"}],
- "kid":{"id":"potatis","child":120,"big":250,"how":"hur det lagas parallellt"},
- "steps":[{"t":"steg","wait":"dötid – vad jag hinner göra (valfritt)"}],
- "temp":"kärntemp","box":"matlåda: håller/värms/packas separat","boxOk":true,"upgrade":"vardagslyx-växeln","double":"laga dubbelt?","mageSwap":"bytesförslag om kål/lök/baljväxter","dairyAlt":"mejerifritt alternativ"}
+ "kid":{"id":"potatis","child":120,"how":"hur det lagas parallellt"},
+ "steps":[{"t":"steg","smart":"passa på – smart parallellt moment, t.ex. sätt på potatisvattnet (valfritt)","wait":"dötid – vad jag hinner göra (valfritt)"}],
+ "temp":"kärntemp","box":"matlåda: håller/värms/packas separat","boxOk":true,"upgrade":"vardagslyx-växeln","double":"laga dubbelt?","mageSwap":"ett alternativ/byte (valfritt)","dairyAlt":"mejerifritt alternativ"}
 
 Regler:
 - "g" = gram per EN vuxen mallportion. Appen skalar själv till hushållet (${hhText(p.hh)}).
 - role: protein | fat | main | side | carb | other. Allt tillagnings- och tillbehörsfett ska vara role "fat".
 - Protein: en grupp. Fett: G1=1×, G2=2×, G3=2,5×, G4=1×. Huvudgrönsak 100–150 g (1–2 st). Kolhydrat frivillig, EN (inte ris/pasta/bröd för vuxna – de är barntillbehör i "kid").
 - Använd id från listan nedan. Saknas något: {"name":"…","g":…,"role":"…","n":[kcal,protein,fett,kolh,mättat,kolesterol_mg,betaglukan],"p":pris_kr_per_kg}.
-- Undvik: ${p.avoid.join(', ') || '–'}. Allergier: ${p.allergies.join(', ') || '–'}. Gillar: ${p.likes.join(', ') || '–'}. Viggo gillar: ${p.viggo.join(', ') || '–'}. Utrustning: ${p.equipment.join(', ') || '–'}.
+- Undvik: ${p.avoid.join(', ') || '–'}. Allergier: ${p.allergies.join(', ') || '–'}. Gillar: ${p.likes.join(', ') || '–'}. Viggo (3 år) gillar: ${p.viggo.join(', ') || '–'}. Utrustning: ${p.equipment.join(', ') || '–'}.
 - Mallen och naturliga råvaror gäller (inga lightprodukter, inget processat, inga sötningsmedel). Undantag: fettet. Jag har förhöjt LDL och följer vårdens råd om fett${p.ldl ? ` – max ${p.satDinner} g mättat fett per middagsportion` : ''}, ${p.satBudget} g/dag, kolesterol under ${p.cholGoal} mg.
 - Fettkällor i första hand olivolja, kallpressad rapsolja, nötter, frön, avokado. Ost/mejerifett max 1 × per dag. Smör, grädde, kokos, ghee bara som smaksättning (≤ 5 g). Fett kött/chark max 1 gång/vecka, fisk 2–3 gånger/vecka.
 
@@ -1038,7 +1235,7 @@ Ingredienser (id=namn): ${ids}`;
         }
         const out = { id, g: +l.g || 0, role }; if (l.note) out.note = String(l.note); if (l.raw) out.raw = true; return out;
       });
-      r.steps = (r.steps || []).map((x) => (typeof x === 'string' ? { t: x } : { t: String(x.t || ''), ...(x.wait ? { wait: String(x.wait) } : {}) }));
+      r.steps = (r.steps || []).map((x) => (typeof x === 'string' ? { t: x } : { t: String(x.t || ''), ...(x.wait ? { wait: String(x.wait) } : {}), ...(x.smart ? { smart: String(x.smart) } : {}) }));
       if (r.kid && !ING[r.kid.id]) delete r.kid;
       r.active = +r.active || 30; r.total = +r.total || r.active; r.tags = Array.isArray(r.tags) ? r.tags : [];
       let base = slug(r.title), x = base, k = 2; while (getRecipe(x)) x = `${base}-${k++}`; r.id = x;
@@ -1048,6 +1245,8 @@ Ingredienser (id=namn): ${ids}`;
 
   /* ================= Start ================= */
   window.addEventListener('hashchange', route);
+  applyTheme();
+  renderTimers();
   route();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
