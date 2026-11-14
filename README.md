@@ -6,11 +6,19 @@ En webbapp för vardagsmiddagar enligt måltidsmallen (protein + fett + huvudgr�
 
 | Flik | Vad den gör |
 |---|---|
-| **Vecka** | Veckoplan, mån–sön. Tomma dagar har knappen *Föreslå*. Längst ner finns inköpslista och LDL-balans. |
-| **Förslag** | Föreslår först, sen godkänner du. Du kan filtrera på dag, tid, proteingrupp och *vad du har hemma*. På fredagar är vardagslyx förvalt. |
-| **Recept** | Receptbanken med mallcheck (✓/!), sökning och mallbyggaren för egna recept. |
-| **Tallrik** | Bygg din tallrik: mättat fett mot dagsbudget, kolesterol, betaglukan och fettkällor per måltid. Dagens planerade middag och gårdagens matlåda kan läggas upp med ett tryck. |
-| **Mer** | Hushållsskalning (Ebba/Theo räknas som vuxna när de äter med), smakprofil (undvik/allergier/utrustning), mål, egna ingredienser, import från Claude, backup. |
+| **Vecka** | Veckoremsa med en färgprick per rättyp och dagens rätt som *I kväll*. *Fyll tomma dagar* planerar efter kostreglerna (fisk 2–3 ggr, fett kött max 1, mättat fett per middag) och går att ångra. En dag kan markeras som *Äta ute*. LDL-balansen visas överst. |
+| **Recept** | Receptbanken med sökning och filter per rättyp, mallcheck (✓/!) och mallbyggaren för egna recept. Varje recept har *Börja laga mat*. |
+| **Inköp** | Inköpslista per avdelning i butikens ordning, eller per recept. Hela förpackningar avrundas uppåt. Skafferiet (*Finns hemma*) hålls utanför listan. Egna varor kan läggas till och listan kan delas som text. |
+| **Tallrik** | Bygg din tallrik: mättat fett mot dagsbudget, kolesterol, betaglukan och fettkällor per måltid. |
+| **Mer** | Utseende (ljust/mörkt), hushållsskalning, smakprofil, mål, egna ingredienser, import från Claude, backup. |
+
+Förslag per dag nås från veckan (*Föreslå* eller ↻).
+
+## Matlagningsläge
+
+Ett steg i taget med stor text. Tider i stegtexten ("10 min", "12–15 min") blir timerknappar. Timrarna ligger kvar längst ner i alla vyer, piper och vibrerar när de är klara och kan förlängas med +1 min. Skärmen hålls tänd så länge läget är öppet.
+
+Begränsning: en webbapp kan inte ringa när telefonen är låst eller appen ligger i bakgrunden. Timern räknar rätt ändå, men ljudet kommer först när appen visas igen.
 
 ## Receptvyn (enligt projektinstruktionen §4)
 

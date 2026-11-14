@@ -35,9 +35,12 @@
       equipment: ['Ugn', 'Stekpanna', 'Stektermometer'],
       ldl: true, satDinner: 7.5,
       satBudget: 19, cholGoal: 300, bgGoal: 3,
-      costMin: 25, costMax: 45
+      costMin: 25, costMax: 45,
+      theme: 'auto', shopSort: 'avd'
     },
-    recipes: {}, hidden: [], plan: {}, plates: {}, customIng: [], shop: {}
+    recipes: {}, hidden: [], plan: {}, plates: {}, customIng: [], shop: {},
+    /* Skafferi: sådant som alltid finns hemma och därför inte hamnar på inköpslistan. */
+    pantry: ['salt', 'kryddor', 'soja', 'vinager', 'senap', 'buljong'], shopNeed: {}, shopExtra: {}
   };
 
   function load() {
@@ -54,6 +57,13 @@
     return clone(DEFAULT_STATE);
   }
   let S = load();
+  function applyTheme() {
+    const t = S.profile.theme || 'auto';
+    const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const m = $('meta[name=theme-color]'); if (m) m.content = dark ? '#141311' : '#f1efe9';
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* lagring saknas (t.ex. förhandsvisning) */ } };
 
   /* ================= Datum ================= */
@@ -129,6 +139,22 @@
   }
   const getRecipe = (id) => allRecipes().find((r) => r.id === id);
   const portions = (hh) => hh.adults + hh.boxes + hh.kids * KID;
+
+  /* Rättyp: styr färg, prick i veckoremsan och emoji. */
+  const KIND = { fisk: ['🐟', 'Fisk'], fagel: ['🍗', 'Fågel'], kott: ['🥩', 'Kött'], vego: ['🥦', 'Vegetariskt'], agg: ['🥚', 'Ägg'] };
+  const KINDS = Object.keys(KIND);
+  function kindOf(r) {
+    const ps = (r.lines || []).filter((l) => l.role === 'protein').map((l) => ({ i: ing(l.id), w: l.g / (ing(l.id).pg || 125) })).sort((a, b) => b.w - a.w);
+    if (!ps.length || ps.some((p) => p.i.g === 4)) return 'vego';
+    const top = ps[0].i;
+    if (top.fisk) return 'fisk';
+    if (/^(kyckling|kalkon)/.test(top.id)) return 'fagel';
+    if (top.id === 'agg') return 'agg';
+    return top.g ? 'kott' : 'vego';
+  }
+  const EMOJI = [[/burgare/, '🍔'], [/soppa/, '🍲'], [/wok/, '🥡'], [/curry|gryta/, '🍛'], [/räk/, '🦐'], [/sallad/, '🥗']];
+  const emojiOf = (r) => r.emoji || (EMOJI.find(([re]) => re.test(r.title.toLowerCase())) || [])[1] || KIND[kindOf(r)][0];
+  const kindChip = (r) => { const k = kindOf(r); return chip(`${KIND[k][0]} ${KIND[k][1]}`, 'k-' + k); };
 
   function profileTokens() {
     return [...S.profile.avoid, ...S.profile.allergies].map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3);
@@ -279,9 +305,12 @@
     const [path, qs] = h0.split('?');
     const parts = path.split('/').map(decodeURIComponent);
     const q = new URLSearchParams(qs || '');
-    const views = { vecka: viewWeek, forslag: viewSuggest, recept: viewList, r: viewRecipe, bygg: viewBuilder, tallrik: viewPlate, inkop: viewShop, mer: viewMore };
+    const views = { vecka: viewWeek, forslag: viewSuggest, recept: viewList, r: viewRecipe, laga: viewCook, bygg: viewBuilder, tallrik: viewPlate, inkop: viewShop, mer: viewMore };
     const v = views[parts[0]] || viewWeek;
-    const tab = { r: 'recept', bygg: 'recept', inkop: 'vecka' }[parts[0]] || parts[0];
+    const tab = { r: 'recept', bygg: 'recept', laga: 'recept', forslag: 'vecka' }[parts[0]] || parts[0];
+    const cooking = parts[0] === 'laga';
+    document.body.classList.toggle('cooking', cooking); keepAwake(cooking);
+    if (parts[0] !== 'vecka') LAST_FILL = null;
     $$('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
     v(parts.slice(1), q);
     const el = anchor && document.getElementById(anchor);
@@ -290,42 +319,81 @@
   const go = (h) => { if (location.hash === h) route(); else location.hash = h; };
 
   /* ================= Vecka ================= */
+  const SPECIAL = { '@ute': ['🍽️', 'Äta ute', 'Inte hemma'], '@rest': ['📦', 'Rester', 'Ingen matlagning'] };
+  const WD = ['mån', 'tis', 'ons', 'tors', 'fre', 'lör', 'sön'];
+  const planned = (d) => (S.plan[d] && !SPECIAL[S.plan[d]] && getRecipe(S.plan[d])) || null;
+  let LAST_FILL = null;
   function viewWeek(_, q) {
     const off = +(q.get('w') || 0);
-    const days = weekDays(off);
-    let count = 0;
-    const rows = days.map((d) => {
-      const r = S.plan[d] && getRecipe(S.plan[d]);
-      const isToday = d === today();
+    const days = weekDays(off); const td = today();
+    const info = days.map((d) => { const r = planned(d); return { d, r, sp: SPECIAL[S.plan[d]], k: r && kindOf(r) }; });
+    const count = info.filter((x) => x.r).length;
+    const free = info.filter((x) => !x.r && !x.sp && x.d >= td).length;
+    const strip = info.map(({ d, r, sp, k }) => `<button class="wd${d === td ? ' on' : ''}" data-go="d-${d}"><span>${WD[wdIdx(d)]}</span><b>${parseISO(d).getDate()}</b><i class="dot${r ? ' k-' + k : sp ? ' k-sp' : ''}"></i></button>`).join('');
+    const rows = info.map(({ d, r, sp, k }) => {
+      const isT = d === td;
+      const date = `<div class="day-d"><span>${WD[wdIdx(d)]}</span><b>${parseISO(d).getDate()}</b></div>`;
+      const tonight = isT ? '<span class="tonight">I kväll</span>' : '';
       if (r) {
-        const a = analyze(r); count++;
-        return `<div class="day ${isToday ? 'today' : ''}">
-          <div class="day-h"><b>${dayName(d)}</b> <span class="muted">${shortDate(d)}</span></div>
-          <a class="day-r" href="#/r/${encodeURIComponent(r.id)}?d=${d}"><b>${esc(r.title)}</b><div class="chips">${recipeChips(r, a)}</div></a>
-          <div class="day-a"><a class="btn sm ghost" href="#/forslag?d=${d}" title="Byt">↻</a><button class="btn sm ghost" data-unplan="${d}" title="Ta bort">✕</button></div>
+        const a = analyze(r); const href = `#/r/${encodeURIComponent(r.id)}?d=${d}`;
+        const sat = S.profile.ldl ? ` · <span class="sat ${a.n[4] <= S.profile.satDinner ? 'good' : a.n[4] > S.profile.satDinner * 1.15 ? 'bad' : ''}">mättat ${fmt(a.n[4])} g</span>` : '';
+        return `<div class="day${isT ? ' today' : ''}" id="d-${d}">${date}
+          <a class="tile k-${k}" href="${href}" tabindex="-1" aria-hidden="true">${emojiOf(r)}</a>
+          <a class="day-r" href="${href}">${tonight}<b>${esc(r.title)}</b><span class="meta">${KIND[k][1]} · ${r.active} min${sat}${a.avoid.length ? ' · <span class="sat bad">undvik!</span>' : ''}</span></a>
+          <div class="day-a"><a class="x" href="#/forslag?d=${d}" title="Byt rätt" aria-label="Byt rätt">↻</a><button class="x" data-unplan="${d}" title="Ta bort" aria-label="Ta bort">✕</button></div>
         </div>`;
       }
-      return `<div class="day empty ${isToday ? 'today' : ''}">
-        <div class="day-h"><b>${dayName(d)}</b> <span class="muted">${shortDate(d)}</span></div>
-        <div class="day-r muted">Ingen middag planerad</div>
-        <div class="day-a"><a class="btn sm" href="#/forslag?d=${d}">Föreslå</a></div>
+      if (sp) {
+        return `<div class="day${isT ? ' today' : ''}" id="d-${d}">${date}
+          <span class="tile k-sp">${sp[0]}</span>
+          <div class="day-r">${tonight}<b>${sp[1]}</b><span class="meta">${sp[2]}</span></div>
+          <div class="day-a"><button class="x" data-unplan="${d}" title="Ta bort" aria-label="Ta bort">✕</button></div>
+        </div>`;
+      }
+      return `<div class="day empty${isT ? ' today' : ''}" id="d-${d}">${date}
+        <a class="tile add" href="#/forslag?d=${d}" aria-label="Föreslå middag">+</a>
+        <div class="day-r">${tonight}<span class="muted small">Inget planerat</span></div>
+        <div class="day-a"><a class="btn sm" href="#/forslag?d=${d}">Föreslå</a><button class="btn sm ghost" data-sp="${d}" title="Äta ute / inte hemma" aria-label="Äta ute">🍽️</button></div>
       </div>`;
     }).join('');
+    const title = off === 0 ? 'Den här veckan' : off === 1 ? 'Nästa vecka' : off === -1 ? 'Förra veckan' : `Vecka ${isoWeek(days[0])}`;
+    const undo = LAST_FILL && LAST_FILL.every((d) => days.includes(d)) ? LAST_FILL : null;
     app().innerHTML = `
-      <div class="head-row">
-        <a class="btn ghost" href="#/vecka?w=${off - 1}">‹</a>
-        <h1>Vecka ${isoWeek(days[0])}${off === 0 ? '' : ''}</h1>
-        <a class="btn ghost" href="#/vecka?w=${off + 1}">›</a>
+      <div class="wk-head">
+        <a class="iconbtn" href="#/vecka?w=${off - 1}" aria-label="Föregående vecka">‹</a>
+        <h1>${title}<small>vecka ${isoWeek(days[0])} · ${shortDate(days[0])}–${shortDate(days[6])}</small></h1>
+        <a class="iconbtn" href="#/vecka?w=${off + 1}" aria-label="Nästa vecka">›</a>
       </div>
-      ${off !== 0 ? `<p class="center"><a href="#/vecka">Till denna vecka</a></p>` : ''}
-      <div class="days">${rows}</div>
-      <div class="card sum">
-        <div><span class="muted">Planerat</span><b>${count} middagar</b></div>
-        <a class="btn" href="#/inkop?w=${off}">🛒 Inköpslista</a>
-      </div>
+      <div class="strip">${strip}</div>
+      ${undo ? `<div class="banner"><span>✨ ${undo.length} dagar ifyllda efter kostreglerna</span><button class="linkbtn" id="undo-fill">Ångra</button></div>` : ''}
       ${S.profile.ldl && count ? weekBalance(days) : ''}
-      <p class="muted small">Satser räknas på ${hhText(S.profile.hh)} (ändras under Mer).</p>`;
-    $$('[data-unplan]', app()).forEach((b) => b.onclick = () => { delete S.plan[b.dataset.unplan]; save(); route(); });
+      <div class="days">${rows}</div>
+      ${free ? `<button class="btn full" id="fill" style="margin-top:12px">✨ Fyll ${free === 1 ? 'den tomma dagen' : `${free} tomma dagar`}</button>` : ''}
+      <a class="btn primary full big" href="#/inkop?w=${off}" style="margin-top:10px">Inköpslista · ${count} ${count === 1 ? 'middag' : 'middagar'}</a>
+      <p class="muted small center">Satser räknas på ${hhText(S.profile.hh)}.</p>`;
+    $$('[data-go]', app()).forEach((b) => b.onclick = () => document.getElementById(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    $$('[data-unplan]', app()).forEach((b) => b.onclick = () => { delete S.plan[b.dataset.unplan]; LAST_FILL = null; save(); rerenderWeek(q); });
+    $$('[data-sp]', app()).forEach((b) => b.onclick = () => { S.plan[b.dataset.sp] = '@ute'; save(); rerenderWeek(q); });
+    const fill = $('#fill'); if (fill) fill.onclick = () => {
+      const done = autoFill(days);
+      if (!done.length) return toast('Hittar inga recept som passar');
+      LAST_FILL = done; rerenderWeek(q);
+    };
+    const un = $('#undo-fill'); if (un) un.onclick = () => { LAST_FILL.forEach((d) => delete S.plan[d]); LAST_FILL = null; save(); rerenderWeek(q); };
+  }
+  function rerenderWeek(q) { const y = window.scrollY; viewWeek(null, q); window.scrollTo(0, y); }
+  /* Fyller veckans tomma dagar med samma poängsättning som Förslag: kostreglerna väger tyngst. */
+  function autoFill(days) {
+    const keep = { d: SG.d, lyx: SG.lyx, have: SG.have, group: SG.group, maxTime: SG.maxTime };
+    const done = [];
+    days.filter((d) => d >= today() && !S.plan[d]).forEach((d) => {
+      Object.assign(SG, { d, lyx: wdIdx(d) === 4, have: '', group: 0, maxTime: wdIdx(d) >= 4 ? 90 : 40 });
+      const used = new Set(days.map((x) => S.plan[x]));
+      const c = candidates().find((x) => !used.has(x.r.id));
+      if (c) { S.plan[d] = c.r.id; done.push(d); }
+    });
+    Object.assign(SG, keep); SG.shown = []; save();
+    return done;
   }
   const hasP = (r, k) => r.lines.some((l) => l.role === 'protein' && ing(l.id)[k]);
   function weekBalance(days) {
@@ -390,8 +458,8 @@
     const cand = candidates(); const candMap = Object.fromEntries(cand.map((c) => [c.r.id, c]));
     const cards = SG.shown.map((id) => candMap[id] || (getRecipe(id) && { r: getRecipe(id), a: analyze(getRecipe(id)), m: haveMatches(getRecipe(id)) })).filter(Boolean).map(({ r, a, m }) => {
       return `<div class="card sugg">
-        <h3>${esc(r.title)}</h3>
-        <p>${esc(r.why)}</p>
+        <div class="sugg-h"><span class="tile k-${kindOf(r)}">${emojiOf(r)}</span><h3>${esc(r.title)}</h3></div>
+        <p class="muted">${esc(r.why)}</p>
         <div class="chips">${recipeChips(r, a)}</div>
         ${m.length ? `<p class="have">✓ Har hemma: ${esc(m.join(', '))}</p>` : ''}
         <div class="btns">
@@ -402,7 +470,8 @@
       </div>`;
     }).join('');
     app().innerHTML = `
-      <h1>Förslag</h1>
+      <a class="back" href="#/vecka">‹ Veckan</a>
+      <h1>Förslag för ${dayName(SG.d).toLowerCase()}</h1>
       <div class="card filters">
         <label>Dag <select id="sg-d">${days.map((x) => `<option value="${x}" ${x === SG.d ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] ? ' ●' : ''}</option>`).join('')}</select></label>
         <label class="wide">Vad har du hemma? <input id="sg-h" placeholder="t.ex. kyckling, broccoli, paprika" value="${esc(SG.have)}"></label>
@@ -440,22 +509,23 @@
   }
 
   /* ================= Receptlista ================= */
-  let LIST_Q = '', LIST_G = 0;
+  let LIST_Q = '', LIST_G = '';
   function viewList() {
     const rs = allRecipes().map((r) => ({ r, a: analyze(r) }));
     const t = LIST_Q.toLowerCase();
-    const show = rs.filter(({ r, a }) => (!LIST_G || a.group === LIST_G) &&
+    const show = rs.filter(({ r }) => (!LIST_G || kindOf(r) === LIST_G) &&
       (!t || r.title.toLowerCase().includes(t) || r.lines.some((l) => ing(l.id).name.toLowerCase().includes(t)) || (r.tags || []).some((x) => x.includes(t))));
     app().innerHTML = `
       <div class="head-row"><h1>Recept</h1><a class="btn primary" href="#/bygg">+ Nytt</a></div>
       <input class="search" id="lq" placeholder="Sök recept, ingrediens eller tagg" value="${esc(LIST_Q)}">
-      <div class="seg">${[0, 1, 2, 3, 4].map((g) => `<button data-g="${g}" class="${g === LIST_G ? 'on' : ''}">${g ? 'G' + g : 'Alla'}</button>`).join('')}</div>
+      <div class="seg">${['', ...KINDS].filter((k) => !k || rs.some(({ r }) => kindOf(r) === k)).map((k) => `<button data-g="${k}" class="${k === LIST_G ? 'on' : ''}">${k ? KIND[k][1] : 'Alla'}</button>`).join('')}</div>
       <div class="list">${show.map(({ r, a }) => `<a class="card item" href="#/r/${encodeURIComponent(r.id)}">
-        <div class="item-t"><b>${esc(r.title)}</b>${r.seed ? '' : ' <span class="muted small">(egen)</span>'}</div>
-        <div class="chips">${recipeChips(r, a)}</div></a>`).join('') || '<p class="muted">Inga träffar.</p>'}</div>
+        <span class="tile k-${kindOf(r)}">${emojiOf(r)}</span>
+        <div><b>${esc(r.title)}</b>${r.seed ? '' : '<span class="muted small">eget recept</span>'}
+        <div class="chips">${recipeChips(r, a)}</div></div></a>`).join('') || '<p class="muted">Inga träffar.</p>'}</div>
       <p class="muted small center">${rs.length} recept</p>`;
     const lq = $('#lq'); lq.oninput = (e) => { LIST_Q = e.target.value; const pos = lq.selectionStart; viewList(); const n = $('#lq'); n.focus(); n.setSelectionRange(pos, pos); };
-    $$('.seg button', app()).forEach((b) => b.onclick = () => { LIST_G = +b.dataset.g; viewList(); });
+    $$('.seg button', app()).forEach((b) => b.onclick = () => { LIST_G = b.dataset.g; viewList(); });
   }
 
   /* ================= Recept ================= */
@@ -481,10 +551,15 @@
     const issues = a.rows.filter((x) => x.s === 'warn' || x.s === 'err').length + a.notes.filter(([s]) => s === 'warn' || s === 'err').length;
 
     app().innerHTML = `
-      <a class="back" href="${d ? '#/vecka' : '#/recept'}">‹ ${d ? 'Veckan' : 'Recepten'}</a>
+      <div class="topbar">
+        <a class="iconbtn" href="${d ? '#/vecka' : '#/recept'}" aria-label="Tillbaka">‹</a><span class="sp"></span>
+        <a class="iconbtn" href="#/bygg/${encodeURIComponent(r.id)}" aria-label="Redigera" title="Redigera">✎</a>
+        <button class="iconbtn" id="cp" aria-label="Kopiera som text" title="Kopiera som text">⧉</button>
+      </div>
+      <div class="hero k-${kindOf(r)}">${emojiOf(r)}</div>
       <h1>${esc(r.title)}</h1>
+      <div class="chips">${kindChip(r)}${chip(`⏱ ${r.active} min aktiv · ${r.total} min totalt`)}${S.profile.ldl ? satChip(n[4]) : ''}${r.lyx ? chip('✨ fredag', 'chip-lyx') : ''}${a.avoid.length ? chip('undvik!', 'chip-bad') : ''}</div>
       <p class="why">${esc(r.why)}</p>
-      <div class="chips">${chip(`⏱ ${r.active} min aktiv · ${r.total} min totalt`)}${S.profile.ldl ? satChip(n[4]) : ''}${r.lyx ? chip('✨ fredag', 'chip-lyx') : ''}${a.avoid.length ? chip('undvik!', 'chip-bad') : ''}</div>
       ${preview && d ? `<div class="card cta"><span>Passar den ${dayName(d).toLowerCase()}?</span><button class="btn primary" id="ok">Godkänn</button><a class="btn ghost" href="#/forslag?d=${d}">Tillbaka</a></div>` : ''}
 
       <section class="card">
@@ -537,14 +612,15 @@
 
       <div class="actions">
         <select id="plan-d" class="plan-sel"><option value="">📅 Planera…</option>${[...weekDays(0), ...weekDays(1)].map((x) => `<option value="${x}" ${x === (d || planned) ? 'selected' : ''}>${dayName(x)} ${shortDate(x)}${S.plan[x] && S.plan[x] !== r.id ? ' (upptagen)' : ''}</option>`).join('')}</select>
-        <button class="btn primary" id="to-plate">🍽 Lägg på tallriken</button>
+        <button class="btn" id="to-plate">🍽 Lägg på tallriken</button>
       </div>
-      <p class="center small"><a href="#/bygg/${encodeURIComponent(r.id)}">✎ Redigera</a> · <a href="#" id="cp">⧉ Kopiera som text</a></p>`;
+      ${r.steps.length ? `<div class="cookbar"><a class="btn primary full big" href="#/laga/${encodeURIComponent(r.id)}${d ? '?d=' + d : ''}">🍳 Börja laga mat</a></div>` : ''}`;
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => {
       VHH[s.dataset.key] = Math.max(0, VHH[s.dataset.key] + +b.dataset.d); const y = window.scrollY; route(); window.scrollTo(0, y);
       const dd = $('details.portions'); if (dd) dd.open = true;
     }));
+    if (COOK.id !== r.id) COOK.i = 0;
     const ok = $('#ok'); if (ok) ok.onclick = () => { S.plan[d] = r.id; save(); toast(`Planerad: ${dayName(d)}`); go(`#/r/${encodeURIComponent(r.id)}?d=${d}`); };
     $('#plan-d').onchange = (e) => { if (!e.target.value) return; S.plan[e.target.value] = r.id; save(); toast(`Planerad: ${dayName(e.target.value)} ${shortDate(e.target.value)}`); };
     $('#to-plate').onclick = () => {
@@ -569,6 +645,132 @@
     L.push('', '## Matlåda', r.box || '–');
     if (r.upgrade) L.push('', `## Vardagslyx-växeln`, r.upgrade);
     return L.join('\n');
+  }
+
+  /* ================= Timrar ================= */
+  const TKEY = 'receptbank.timers';
+  let TIMERS = []; try { TIMERS = JSON.parse(sessionStorage.getItem(TKEY)) || []; } catch (e) { /* ingen lagring */ }
+  const saveTimers = () => { try { sessionStorage.setItem(TKEY, JSON.stringify(TIMERS)); } catch (e) { /* ingen lagring */ } };
+  let actx = null, tickH = null;
+  /* Ljudet måste låsas upp av ett tryck (iPhone), därför skapas ljudmotorn när timern startas. */
+  function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; } }
+  function beep() {
+    try {
+      unlockAudio();
+      [0, 0.28, 0.56].forEach((dt) => {
+        const o = actx.createOscillator(), g = actx.createGain(); const t = actx.currentTime + dt;
+        o.frequency.value = 880; o.connect(g); g.connect(actx.destination);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.start(t); o.stop(t + 0.24);
+      });
+    } catch (e) { /* inget ljud */ }
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+  }
+  const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  function startTimer(min, label, title) {
+    unlockAudio();
+    TIMERS.push({ id: Date.now().toString(36), label, title, end: Date.now() + min * 60000, total: min * 60000 });
+    saveTimers(); renderTimers();
+  }
+  function renderTimers() {
+    $('#timers').innerHTML = TIMERS.map((t) => `<div class="tm${t.done ? ' done' : ''}" data-tid="${t.id}"><span class="tm-i">⏱</span><span class="tm-l"><small>${esc(t.title)}</small><b>${esc(t.label)}</b></span><span class="tm-left"></span><button data-add aria-label="Lägg till en minut">+1</button><button data-x aria-label="Stäng timern">✕</button><i class="tm-bar"><i></i></i></div>`).join('');
+    document.body.classList.toggle('has-timers', TIMERS.length > 0);
+    if (TIMERS.length && !tickH) tickH = setInterval(tick, 500);
+    if (!TIMERS.length && tickH) { clearInterval(tickH); tickH = null; }
+    tick();
+  }
+  function tick() {
+    const now = Date.now(); let changed = false;
+    TIMERS.forEach((t) => {
+      const left = t.end - now;
+      if (left <= 0 && !t.done) { t.done = true; t.rings = 0; t.lastRing = 0; changed = true; }
+      if (t.done && t.rings < 6 && now - t.lastRing > 2500) { t.rings++; t.lastRing = now; beep(); }
+      const el = $(`[data-tid="${t.id}"]`);
+      if (el) { $('.tm-left', el).textContent = t.done ? 'Klar!' : mmss(left); $('.tm-bar i', el).style.width = `${Math.max(0, Math.min(100, 100 * (1 - left / t.total)))}%`; }
+    });
+    if (changed) { saveTimers(); renderTimers(); }
+  }
+  $('#timers').addEventListener('click', (e) => {
+    const el = e.target.closest('[data-tid]'); if (!el) return;
+    const t = TIMERS.find((x) => x.id === el.dataset.tid); if (!t) return;
+    if (e.target.closest('[data-x]')) TIMERS = TIMERS.filter((x) => x !== t);
+    else if (e.target.closest('[data-add]')) { t.end = Math.max(Date.now(), t.end) + 60000; t.total += 60000; t.done = false; }
+    else return;
+    saveTimers(); renderTimers();
+  });
+
+  /* ================= Matlagningsläge ================= */
+  const COOK = { id: null, i: 0 };
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => (wakeLock = null)); }
+      if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+    } catch (e) { wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('cooking')) keepAwake(true); });
+  /* Plockar ut tider ur stegtexten: "10 min", "12–15 min" (den kortare), "1 timme". */
+  function stepTimers(s) {
+    const out = [];
+    const re = /(\d+)(?:\s*[–-]\s*\d+)?\s*(min(?:uter)?|tim(?:mar|me)?)(?![a-zåäö])/gi;
+    [s.t, s.wait].filter(Boolean).forEach((txt) => {
+      let m; re.lastIndex = 0;
+      while ((m = re.exec(txt))) { const min = +m[1] * (/^tim/i.test(m[2]) ? 60 : 1); if (min > 0 && min <= 600 && !out.includes(min)) out.push(min); }
+    });
+    return out;
+  }
+  function viewCook(parts, q) {
+    const r = getRecipe(parts[0]);
+    if (!r || !r.steps.length) return go('#/recept');
+    const d = q.get('d');
+    if (COOK.id !== r.id) { COOK.id = r.id; COOK.i = 0; }
+    const N = r.steps.length; COOK.i = Math.max(0, Math.min(COOK.i, N));
+    const i = COOK.i; const s = r.steps[i]; const P = portions(VHH);
+    const back = `#/r/${encodeURIComponent(r.id)}${d ? '?d=' + d : ''}`;
+    const body = s
+      ? `<p class="cook-n">Steg ${i + 1} av ${N}</p>
+         <p class="cook-t">${esc(s.t)}</p>
+         ${s.smart ? `<div class="bubble smart"><b>⚡ Passa på</b> ${esc(s.smart)}</div>` : ''}
+         ${s.wait ? `<div class="bubble wait"><b>⏳ Dötid</b> ${esc(s.wait)}</div>` : ''}
+         <div class="cook-timers">${stepTimers(s).map((m) => `<button class="btn" data-timer="${m}">⏱ Timer ${m} min</button>`).join('')}</div>
+         ${r.temp && i === N - 1 ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}`
+      : `<div class="cook-done"><p class="cook-n">Klart</p>
+         <p class="cook-t">Smaklig måltid!</p>
+         ${r.temp ? `<p class="temp">🌡 ${esc(r.temp)}</p>` : ''}
+         ${r.box ? `<p>📦 <b>Matlåda${r.boxOk === false ? ' – passar dåligt' : ''}:</b> ${esc(r.box)}</p>` : ''}
+         <button class="btn primary full big" id="ck-plate">🍽 Lägg på tallriken</button>
+         <a class="btn ghost full" href="${back}">Tillbaka till receptet</a></div>`;
+    app().innerHTML = `
+      <div class="cook-top"><a class="iconbtn" href="${back}" aria-label="Stäng matlagningsläget">✕</a><b class="serif">${esc(r.title)}</b><button class="iconbtn" id="ck-ing" aria-label="Visa ingredienser">☰</button></div>
+      <div class="cook-body">${body}</div>
+      <div class="cook-nav">
+        <button class="btn ghost big" id="ck-prev" ${i === 0 ? 'disabled' : ''}>‹ Bakåt</button>
+        <div class="dots">${[...Array(N + 1)].map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+        <button class="btn primary big" id="ck-next" ${i === N ? 'disabled' : ''}>${i === N - 1 ? 'Klar ✓' : 'Nästa ›'}</button>
+      </div>
+      <dialog class="sheet" id="ck-sheet"><div class="sheet-in">
+        <div class="sheet-h"><h2>Ingredienser</h2><button class="iconbtn" id="ck-close" aria-label="Stäng">✕</button></div>
+        <p class="muted small">${hhText(VHH)}</p>
+        <table class="ing">${r.lines.map((l) => `<tr><td>${l.role === 'fat' ? tierDot(ing(l.id)) : ''}${esc(ing(l.id).name)}${l.note ? ` <span class="muted small">– ${esc(l.note)}</span>` : ''}</td><td class="num">${amount(l.id, l.g * P)}</td></tr>`).join('')}
+        ${r.kid && kidGrams(r, VHH) ? `<tr><td>Till Viggo: ${esc(ing(r.kid.id).name.toLowerCase())}</td><td class="num">${amount(r.kid.id, kidGrams(r, VHH))}</td></tr>` : ''}</table>
+      </div></dialog>`;
+    const step = (n) => { COOK.i = Math.max(0, Math.min(N, i + n)); viewCook(parts, q); window.scrollTo(0, 0); };
+    $('#ck-prev').onclick = () => step(-1);
+    $('#ck-next').onclick = () => step(1);
+    $$('[data-timer]', app()).forEach((b) => b.onclick = () => { startTimer(+b.dataset.timer, `Steg ${i + 1} · ${b.dataset.timer} min`, r.title); toast(`Timer ${b.dataset.timer} min startad`); });
+    const sheet = $('#ck-sheet');
+    $('#ck-ing').onclick = () => (sheet.showModal ? sheet.showModal() : sheet.setAttribute('open', ''));
+    $('#ck-close').onclick = () => (sheet.close ? sheet.close() : sheet.removeAttribute('open'));
+    sheet.onclick = (e) => { if (e.target === sheet) sheet.close(); };
+    const pl = $('#ck-plate'); if (pl) pl.onclick = () => {
+      const day = d || today(); const p = plate(day);
+      p.middag = p.middag.filter((x) => !x.r); p.middag.push({ r: r.id, f: 1 }); save();
+      toast('Middagen ligger på tallriken'); go(`#/tallrik?d=${day}`);
+    };
+    let x0 = null;
+    const bodyEl = $('.cook-body');
+    bodyEl.ontouchstart = (e) => { x0 = e.touches[0].clientX; };
+    bodyEl.ontouchend = (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); };
   }
 
   /* ================= Mallbyggare ================= */
@@ -811,28 +1013,70 @@
   const stepperPortion = (m, ix, f) => `<span class="stepper pstep"><button data-d="-0.25" data-m="${m}" data-ix="${ix}">−</button><b>${fmt(f, 2)} port</b><button data-d="0.25" data-m="${m}" data-ix="${ix}">+</button></span>`;
 
   /* ================= Inköpslista ================= */
+  const AISLES = [['Frukt & grönt', '🥬'], ['Bröd', '🍞'], ['Kött & fisk', '🥩'], ['Mejeri & ägg', '🧀'], ['Skafferi', '🫙'], ['Frys', '🧊'], ['Övrigt', '🛒']];
+  /* I butiken köper man hela förpackningar: avrunda uppåt till hela styck, annars vikt. */
+  function shopAmount(id, g) {
+    const i = ing(id); const r = roundG(g);
+    if (i.pcs) { const n = Math.max(1, Math.ceil(g / i.pcs - 0.15)); return `${n} ${n > 1 ? PLURAL[i.pcsN] || i.pcsN || 'st' : i.pcsN || 'st'}`; }
+    return r >= 1000 ? `${fmt(r / 1000, 2)} kg` : `${r} g`;
+  }
+  const aisleOf = (id) => (AISLES.some(([a]) => a === ing(id).a) ? ing(id).a : 'Övrigt');
   function viewShop(_, q) {
     const off = +(q.get('w') || 0); const days = weekDays(off); const wk = days[0];
     const hh = S.profile.hh; const P = portions(hh);
-    const tot = {}; const used = [];
+    const tot = {}, by = {}, meals = [];
     days.forEach((d) => {
-      const r = S.plan[d] && getRecipe(S.plan[d]); if (!r) return; used.push(`${dayName(d).slice(0, 3)}: ${r.title}`);
-      r.lines.forEach((l) => (tot[l.id] = (tot[l.id] || 0) + l.g * P));
-      if (r.kid && kidGrams(r, hh)) tot[r.kid.id] = (tot[r.kid.id] || 0) + kidGrams(r, hh);
+      const r = planned(d); if (!r) return;
+      const items = r.lines.map((l) => [l.id, l.g * P]);
+      if (r.kid && kidGrams(r, hh)) items.push([r.kid.id, kidGrams(r, hh)]);
+      meals.push({ d, r, items });
+      items.forEach(([id, g]) => { tot[id] = (tot[id] || 0) + g; by[id] = by[id] || []; if (!by[id].includes(r)) by[id].push(r); });
     });
     const checked = S.shop[wk] || (S.shop[wk] = {});
-    const groups = {};
-    Object.entries(tot).forEach(([id, g]) => { const a = ing(id).a || 'Övrigt'; (groups[a] = groups[a] || []).push([id, g]); });
-    const order = Object.values(DB.aisles).concat('Övrigt');
+    const need = S.shopNeed[wk] || (S.shopNeed[wk] = {});
+    const extra = S.shopExtra[wk] || (S.shopExtra[wk] = []);
+    const atHome = (id) => S.pantry.includes(id) && !need[id];
+    const byName = (a, b) => ing(a).name.localeCompare(ing(b).name, 'sv');
+    const buy = Object.keys(tot).filter((id) => !atHome(id)).sort(byName);
+    const home = Object.keys(tot).filter(atHome).sort(byName);
+    const perRecipe = S.profile.shopSort === 'recept';
+    const left = buy.filter((id) => !checked[id]).length + extra.filter((x) => !x.done).length;
+    const row = (id, g, badges) => `<li class="${checked[id] ? 'done' : ''}" data-id="${id}"><button class="ck" role="checkbox" aria-checked="${!!checked[id]}" aria-label="${esc(ing(id).name)}"></button><span class="nm">${esc(ing(id).name)}</span><span class="amt">${shopAmount(id, g)}</span>${badges ? `<span class="rb">${by[id].map((r) => `<i class="k-${kindOf(r)}" title="${esc(r.title)}">${emojiOf(r)}</i>`).join('')}</span>` : ''}<button class="pan" data-pan="${id}" title="Har alltid hemma" aria-label="Har alltid hemma: ${esc(ing(id).name)}">⌂</button></li>`;
+    const sections = perRecipe
+      ? meals.map(({ d, r, items }) => { const ls = items.filter(([id]) => !atHome(id)); return ls.length ? `<h2 class="aisle">${emojiOf(r)} ${WD[wdIdx(d)]} · ${esc(r.title)}</h2><ul class="shop card">${ls.map(([id, g]) => row(id, g, false)).join('')}</ul>` : ''; }).join('')
+      : AISLES.map(([a, e]) => { const ids = buy.filter((id) => aisleOf(id) === a); return ids.length ? `<h2 class="aisle">${e} ${a}</h2><ul class="shop card">${ids.map((id) => row(id, tot[id], true)).join('')}</ul>` : ''; }).join('');
+    const wkName = off === 0 ? 'Den här veckan' : off === 1 ? 'Nästa vecka' : `Vecka ${isoWeek(wk)}`;
     app().innerHTML = `
-      <a class="back" href="#/vecka?w=${off}">‹ Veckan</a>
-      <h1>Inköpslista v${isoWeek(wk)}</h1>
-      ${used.length ? `<p class="muted small">${used.map(esc).join(' · ')}</p><p class="muted small">Räknat på ${hhText(hh)}. Bocka av det du redan har hemma.</p>` : '<p>Inga middagar planerade den här veckan.</p>'}
-      ${order.filter((a) => groups[a]).map((a) => `<section class="card"><h2>${a}</h2><ul class="shop">${groups[a].sort((x, y) => ing(x[0]).name.localeCompare(ing(y[0]).name, 'sv')).map(([id, g]) =>
-        `<li class="${checked[id] ? 'done' : ''}"><label><input type="checkbox" data-id="${id}" ${checked[id] ? 'checked' : ''}> <span>${esc(ing(id).name)}</span> <span class="amt">${amount(id, g)}</span></label></li>`).join('')}</ul></section>`).join('')}
-      ${used.length ? `<div class="card sum"><button class="btn" id="cp-shop">⧉ Kopiera listan</button></div>` : ''}`;
-    $$('.shop input', app()).forEach((c) => c.onchange = () => { checked[c.dataset.id] = c.checked; if (!c.checked) delete checked[c.dataset.id]; save(); const y = window.scrollY; viewShop(_, q); window.scrollTo(0, y); });
-    const cp = $('#cp-shop'); if (cp) cp.onclick = () => copyText(order.filter((a) => groups[a]).map((a) => `${a}\n` + groups[a].filter(([id]) => !checked[id]).map(([id, g]) => `- ${ing(id).name} ${amountText(id, g)}`).join('\n')).join('\n\n'));
+      <div class="shop-head">
+        <div><h1>Inköpslista</h1><p class="muted small">${meals.length} ${meals.length === 1 ? 'middag' : 'middagar'} · ${hhShort(hh)} · ${perRecipe ? 'per recept' : 'per avdelning'}</p></div>
+        <div class="shop-tools"><button class="iconbtn" id="sort" title="Byt sortering" aria-label="Byt sortering">≡</button><button class="iconbtn" id="share" title="Dela listan" aria-label="Dela listan">⇪</button></div>
+      </div>
+      <div class="seg"><a href="#/inkop?w=0" class="${off === 0 ? 'on' : ''}">Den här veckan</a><a href="#/inkop?w=1" class="${off === 1 ? 'on' : ''}">Nästa vecka</a>${off !== 0 && off !== 1 ? `<a class="on">${wkName}</a>` : ''}</div>
+      ${meals.length ? '' : `<div class="card empty-state"><p>Inga middagar planerade ${wkName.toLowerCase()}.</p><p><a href="#/vecka?w=${off}">Planera veckan</a></p></div>`}
+      ${sections}
+      <h2 class="aisle">✏️ Eget</h2>
+      ${extra.length ? `<ul class="shop card">${extra.map((x, ix) => `<li class="${x.done ? 'done' : ''}" data-ex="${ix}"><button class="ck" role="checkbox" aria-checked="${!!x.done}" aria-label="${esc(x.t)}"></button><span class="nm">${esc(x.t)}</span><button class="pan" data-exrm="${ix}" aria-label="Ta bort ${esc(x.t)}">✕</button></li>`).join('')}</ul>` : ''}
+      <form class="addrow" id="add"><input id="add-t" placeholder="Lägg till egen vara, t.ex. mjölk" autocomplete="off"><button class="btn">Lägg till</button></form>
+      ${home.length ? `<details class="card fold" id="home"><summary>🧺 Finns hemma · ${home.length}</summary><p class="muted small">Det här behövs i veckans recept men ligger i skafferiet, så det hamnar inte på listan.</p><ul class="shop">${home.map((id) => `<li class="homerow"><span class="nm">${esc(ing(id).name)}</span><span class="amt">${shopAmount(id, tot[id])}</span><button class="btn sm" data-need="${id}">Slut – köp</button><button class="pan" data-unpan="${id}" title="Ta bort ur skafferiet" aria-label="Ta bort ur skafferiet">✕</button></li>`).join('')}</ul></details>` : ''}
+      ${meals.length ? `<p class="muted small center">Tryck på en vara när den ligger i vagnen. ⌂ = har alltid hemma (flyttas till skafferiet).</p>` : ''}
+      ${left ? `<div style="margin-top:14px"><button class="btn primary full big" id="share2">⇪ Dela ${left} varor</button></div>` : ''}`;
+    const rer = () => { save(); const y = window.scrollY; const open = ($('#home') || {}).open; viewShop(_, q); window.scrollTo(0, y); if (open && $('#home')) $('#home').open = true; };
+    $$('li[data-id]', app()).forEach((li) => li.onclick = () => { const id = li.dataset.id; if (checked[id]) delete checked[id]; else checked[id] = true; rer(); });
+    $$('[data-pan]', app()).forEach((b) => b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.pan; if (!S.pantry.includes(id)) S.pantry.push(id); delete need[id]; toast(`${ing(id).name} → Finns hemma`); rer(); });
+    $$('[data-need]', app()).forEach((b) => b.onclick = () => { need[b.dataset.need] = true; rer(); });
+    $$('[data-unpan]', app()).forEach((b) => b.onclick = () => { S.pantry = S.pantry.filter((x) => x !== b.dataset.unpan); rer(); });
+    $$('li[data-ex]', app()).forEach((li) => li.onclick = () => { const x = extra[+li.dataset.ex]; x.done = !x.done; rer(); });
+    $$('[data-exrm]', app()).forEach((b) => b.onclick = (e) => { e.stopPropagation(); extra.splice(+b.dataset.exrm, 1); rer(); });
+    $('#add').onsubmit = (e) => { e.preventDefault(); const t = $('#add-t').value.trim(); if (!t) return; extra.push({ t }); rer(); $('#add-t').focus(); };
+    $('#sort').onclick = () => { S.profile.shopSort = perRecipe ? 'avd' : 'recept'; rer(); };
+    const text = () => AISLES.map(([a]) => { const ids = buy.filter((id) => aisleOf(id) === a && !checked[id]); return ids.length ? `${a}\n` + ids.map((id) => `${ing(id).name} ${shopAmount(id, tot[id])}`).join('\n') : ''; })
+      .concat(extra.some((x) => !x.done) ? 'Eget\n' + extra.filter((x) => !x.done).map((x) => x.t).join('\n') : '').filter(Boolean).join('\n\n');
+    const share = () => {
+      if (!left) return toast('Listan är tom');
+      if (navigator.share) navigator.share({ title: `Inköpslista ${wkName.toLowerCase()}`, text: text() }).catch(() => {});
+      else copyText(text());
+    };
+    $('#share').onclick = share; const s2 = $('#share2'); if (s2) s2.onclick = share;
   }
 
   /* ================= Mer ================= */
@@ -849,6 +1093,10 @@
           <label>Viggo ${stepper('kids', p.hh.kids)}</label>
         </div>
         <p class="muted small">${hhText(p.hh)}. Ebba/Theo räknas som vuxna när de äter med.</p>
+      </section>
+      <section class="card">
+        <h2>Utseende</h2>
+        <div class="seg" style="margin:0">${[['auto', 'Följ telefonen'], ['light', 'Ljust'], ['dark', 'Mörkt']].map(([k, n]) => `<button data-theme-set="${k}" class="${(p.theme || 'auto') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       </section>
       <section class="card">
         <h2>Smakprofil</h2>
@@ -906,6 +1154,7 @@
 
     $$('.stepper', app()).forEach((s) => $$('button', s).forEach((b) => b.onclick = () => { p.hh[s.dataset.key] = Math.max(0, p.hh[s.dataset.key] + +b.dataset.d); VHH = clone(p.hh); save(); const y = window.scrollY; viewMore(); window.scrollTo(0, y); }));
     $$('[data-list]', app()).forEach((t) => t.onchange = () => { p[t.dataset.list] = t.value.split('\n').map((x) => x.trim()).filter(Boolean); save(); toast('Sparat'); });
+    $$('[data-theme-set]', app()).forEach((b) => b.onclick = () => { p.theme = b.dataset.themeSet; save(); applyTheme(); const y = window.scrollY; viewMore(); window.scrollTo(0, y); });
     $('#ldl').onchange = (e) => { p.ldl = e.target.checked; save(); toast(p.ldl ? 'LDL-läge på' : 'LDL-läge av'); };
     $$('[data-num]', app()).forEach((t) => t.onchange = () => { p[t.dataset.num] = +t.value || 0; save(); toast('Sparat'); });
     $('#cp-prompt').onclick = () => copyText(claudePrompt());
@@ -919,7 +1168,7 @@
     $('#imp').onchange = (e) => {
       const f = e.target.files[0]; if (!f) return;
       f.text().then((t) => {
-        try { const d = JSON.parse(t); if (!d.v) throw 0; if (!confirm('Ersätta all data i appen med filens innehåll?')) return; localStorage.setItem(KEY, JSON.stringify(d)); S = load(); rebuildIng(); VHH = clone(S.profile.hh); toast('Importerat'); go('#/vecka'); }
+        try { const d = JSON.parse(t); if (!d.v) throw 0; if (!confirm('Ersätta all data i appen med filens innehåll?')) return; localStorage.setItem(KEY, JSON.stringify(d)); S = load(); rebuildIng(); VHH = clone(S.profile.hh); applyTheme(); toast('Importerat'); go('#/vecka'); }
         catch (err) { toast('Filen kunde inte läsas'); }
       });
     };
@@ -996,6 +1245,8 @@ Ingredienser (id=namn): ${ids}`;
 
   /* ================= Start ================= */
   window.addEventListener('hashchange', route);
+  applyTheme();
+  renderTimers();
   route();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
